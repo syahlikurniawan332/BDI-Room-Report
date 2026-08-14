@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bdi-cleaning-control",
+  "compatibility_date": "2026-08-14",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bdi-cleaning-control",
+      "database_id": "GANTI_DENGAN_DATABASE_ID_CLOUDFLARE",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PHOTO_BUCKET",
+      "bucket_name": "bdi-cleaning-photos"
+    }
+  ]
+}

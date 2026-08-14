@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+.dev.vars
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+INITIAL_CREDENTIALS.local.txt
+seeds/generated-users.local.sql

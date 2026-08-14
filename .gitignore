@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.wrangler/
+.env
+.env.*
+.dev.vars
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+database-bdi-cleaning/cleaning-control.sqlite
+database-bdi-cleaning/INITIAL_CREDENTIALS.local.txt
+database-bdi-cleaning/seeds/generated-users.local.sql
+playwright-report/
+test-results/

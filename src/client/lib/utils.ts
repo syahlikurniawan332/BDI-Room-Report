@@ -1,0 +1,71 @@
+import { formatWib } from '@shared/datetime';
+import type { ReportStatus, ComplaintStatus } from '@shared/constants';
+
+export { formatWib };
+
+export const REPORT_STATUS_LABELS: Record<ReportStatus, string> = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Menunggu Review',
+  REVISION_REQUIRED: 'Perlu Perbaikan',
+  RESUBMITTED: 'Dikirim Ulang',
+  APPROVED: 'Disetujui',
+  REJECTED: 'Ditolak',
+};
+
+export const COMPLAINT_STATUS_LABELS: Record<ComplaintStatus, string> = {
+  NEW: 'Baru',
+  IN_PROGRESS: 'Diproses',
+  RESOLVED: 'Selesai',
+  REJECTED: 'Ditolak',
+};
+
+export function statusBadgeClass(status: string): string {
+  const map: Record<string, string> = {
+    DRAFT: 'bg-slate-100 text-slate-700',
+    SUBMITTED: 'bg-blue-100 text-blue-800',
+    RESUBMITTED: 'bg-indigo-100 text-indigo-800',
+    REVISION_REQUIRED: 'bg-amber-100 text-amber-800',
+    APPROVED: 'bg-green-100 text-green-800',
+    REJECTED: 'bg-red-100 text-red-800',
+    NEW: 'bg-blue-100 text-blue-800',
+    IN_PROGRESS: 'bg-amber-100 text-amber-800',
+    RESOLVED: 'bg-green-100 text-green-800',
+  };
+  return map[status] ?? 'bg-slate-100 text-slate-700';
+}
+
+export async function downloadReportZip(
+  report: {
+    reportNumber: string;
+    areaName?: string;
+    reporterName: string;
+    submittedAt: string | null;
+    photos?: Array<{ id: string; photoType: string }>;
+  },
+): Promise<void> {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  const meta = {
+    reportNumber: report.reportNumber,
+    area: report.areaName,
+    reporter: report.reporterName,
+    submittedAt: report.submittedAt,
+  };
+  zip.file('metadata.json', JSON.stringify(meta, null, 2));
+
+  for (const photo of report.photos ?? []) {
+    const response = await fetch(`/api/photos/reports/${photo.id}`, { credentials: 'include' });
+    if (response.ok) {
+      const blob = await response.blob();
+      zip.file(`${photo.photoType.toLowerCase()}.jpg`, blob);
+    }
+  }
+
+  const content = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(content);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${report.reportNumber}.zip`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
