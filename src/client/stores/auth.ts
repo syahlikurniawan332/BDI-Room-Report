@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { UserPublic } from '@shared/constants';
 import { apiGet, apiPost } from '../lib/api';
+import { useNotificationStore } from './notifications';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserPublic | null>(null);
@@ -36,6 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
       await apiPost('/auth/logout');
     } finally {
       user.value = null;
+      useNotificationStore().reset();
     }
   }
 

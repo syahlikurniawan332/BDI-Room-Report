@@ -32,6 +32,12 @@ onMounted(async () => {
   areas.value = areaData.areas;
   turnstileSiteKey.value = config.turnstileSiteKey;
 
+  const slug = new URLSearchParams(window.location.search).get('area');
+  if (slug) {
+    const match = areas.value.find((a) => a.slug === slug);
+    if (match) areaId.value = match.id;
+  }
+
   if (turnstileSiteKey.value) {
     const script = document.createElement('script');
     script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';

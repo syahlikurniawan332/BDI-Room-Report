@@ -12,6 +12,7 @@ import {
   getSetting,
 } from '../db/mappers';
 import { requireAdmin, requireAuth, requireCs } from '../middleware/auth';
+import { createNotification, notifyAdmins } from '../lib/notifications';
 
 export const reportRoutes = new Hono<AppContext>();
 
@@ -53,21 +54,46 @@ reportRoutes.get('/', async (c) => {
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
   const status = c.req.query('status');
+  const userId = c.req.query('userId');
+  const areaId = c.req.query('areaId');
+  const dateFrom = c.req.query('dateFrom');
+  const dateTo = c.req.query('dateTo');
+  const reportNumber = c.req.query('reportNumber');
+
   let sql = `SELECT r.*, a.name AS area_name FROM reports r JOIN areas a ON a.id = r.area_id`;
+  const conditions: string[] = [];
   const binds: unknown[] = [];
 
   if (user.role === 'CS') {
-    sql += ' WHERE r.user_id = ?';
+    conditions.push('r.user_id = ?');
     binds.push(user.id);
-    if (status) {
-      sql += ' AND r.status = ?';
-      binds.push(status);
-    }
-  } else if (status) {
-    sql += ' WHERE r.status = ?';
-    binds.push(status);
+  } else if (userId) {
+    conditions.push('r.user_id = ?');
+    binds.push(userId);
   }
 
+  if (status) {
+    conditions.push('r.status = ?');
+    binds.push(status);
+  }
+  if (areaId) {
+    conditions.push('r.area_id = ?');
+    binds.push(areaId);
+  }
+  if (dateFrom) {
+    conditions.push(`date(r.submitted_at, '+7 hours') >= ?`);
+    binds.push(dateFrom);
+  }
+  if (dateTo) {
+    conditions.push(`date(r.submitted_at, '+7 hours') <= ?`);
+    binds.push(dateTo);
+  }
+  if (reportNumber) {
+    conditions.push('r.report_number LIKE ?');
+    binds.push(`%${reportNumber}%`);
+  }
+
+  if (conditions.length) sql += ` WHERE ${conditions.join(' AND ')}`;
   sql += ' ORDER BY r.updated_at DESC LIMIT 200';
   const rows = await c.env.DB.prepare(sql).bind(...binds).all();
 
@@ -184,6 +210,22 @@ reportRoutes.post('/:id/submit', async (c) => {
 
   await writeAuditLog(c.env.DB, cs.id, 'SUBMIT_REPORT', 'report', reportId);
 
+  const areaRow = await c.env.DB.prepare('SELECT name FROM areas WHERE id = ?')
+    .bind(report.area_id)
+    .first<{ name: string }>();
+
+  const notifTitle =
+    newStatus === 'RESUBMITTED' ? 'Laporan dikirim ulang' : 'Laporan baru masuk';
+  const notifMessage = `${report.report_number} — ${areaRow?.name ?? 'Area'} (${cs.displayName})`;
+  await notifyAdmins(
+    c.env.DB,
+    newStatus === 'RESUBMITTED' ? 'REPORT_RESUBMITTED' : 'REPORT_SUBMITTED',
+    notifTitle,
+    notifMessage,
+    'report',
+    reportId,
+  );
+
   const full = await loadReportWithPhotos(c.env.DB, reportId);
   const responseBody = JSON.stringify({ report: full });
 
@@ -253,6 +295,21 @@ reportRoutes.post('/:id/review', async (c) => {
 
   await writeAuditLog(c.env.DB, admin.id, 'REVIEW_REPORT', 'report', reportId, { decision });
 
+  const decisionLabels: Record<string, string> = {
+    APPROVED: 'Laporan disetujui',
+    REVISION_REQUIRED: 'Laporan perlu perbaikan',
+    REJECTED: 'Laporan ditolak',
+  };
+  await createNotification(
+    c.env.DB,
+    report.user_id,
+    `REPORT_${decision}`,
+    decisionLabels[decision] ?? 'Status laporan diperbarui',
+    `${report.report_number}${note ? `: ${note}` : ''}`,
+    'report',
+    reportId,
+  );
+
   const full = await loadReportWithPhotos(c.env.DB, reportId);
   return c.json({ report: full });
 });
@@ -278,5 +335,15 @@ reportRoutes.get('/:id/reviews', async (c) => {
     .bind(reportId)
     .all();
 
-  return c.json({ reviews: rows.results ?? [] });
+  return c.json({
+    reviews: (rows.results ?? []).map((r) => ({
+      id: r.id as string,
+      reportId: r.report_id as string,
+      adminUserId: r.admin_user_id as string,
+      adminName: r.admin_name as string,
+      decision: r.decision as 'APPROVED' | 'REVISION_REQUIRED' | 'REJECTED',
+      note: (r.note as string | null) ?? null,
+      createdAt: r.created_at as string,
+    })),
+  });
 });

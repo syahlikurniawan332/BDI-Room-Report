@@ -82,8 +82,8 @@ async function sendInactiveReminders(env: Env) {
   const todayWib = toWibDateString();
 
   const csUsers = await env.DB.prepare(
-    `SELECT id, display_name, email FROM users WHERE role = 'CS' AND is_active = 1`,
-  ).all<{ id: string; display_name: string; email: string }>();
+    `SELECT id, username, display_name, email FROM users WHERE role = 'CS' AND is_active = 1`,
+  ).all<{ id: string; username: string; display_name: string; email: string }>();
 
   for (const cs of csUsers.results ?? []) {
     const lastReport = await env.DB.prepare(
@@ -110,9 +110,21 @@ async function sendInactiveReminders(env: Env) {
 
     if (existing) continue;
 
+    const draftCount = await env.DB.prepare(
+      `SELECT COUNT(*) AS count FROM reports WHERE user_id = ? AND status = 'DRAFT'`,
+    )
+      .bind(cs.id)
+      .first<{ count: number }>();
+
     const subject = `[BDI Cleaning] CS tidak aktif: ${cs.display_name}`;
-    const html = `<p>Cleaning Service <strong>${cs.display_name}</strong> (${cs.email}) belum mengirim laporan selama ${workingDays} hari kerja.</p>
-<p>Terakhir submit: ${lastSubmitted}</p>`;
+    const html = `<p>Cleaning Service <strong>${cs.display_name}</strong> belum mengirim laporan selama ${workingDays} hari kerja.</p>
+<ul>
+<li>Username: ${cs.username}</li>
+<li>Email: ${cs.email}</li>
+<li>Laporan terakhir: ${lastSubmitted}</li>
+<li>Hari tidak aktif: ${workingDays}</li>
+<li>Draft aktif: ${draftCount?.count ?? 0}</li>
+</ul>`;
 
     const sent = await sendEmail(env, adminEmail, subject, html);
     if (!sent) continue;

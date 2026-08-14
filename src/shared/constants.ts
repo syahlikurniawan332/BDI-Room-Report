@@ -134,3 +134,14 @@ export interface ReviewPublic {
   note: string | null;
   createdAt: string;
 }
+
+export interface NotificationPublic {
+  id: string;
+  notificationType: string;
+  title: string;
+  message: string;
+  relatedEntityType: string | null;
+  relatedEntityId: string | null;
+  readAt: string | null;
+  createdAt: string;
+}

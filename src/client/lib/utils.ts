@@ -43,29 +43,58 @@ export async function downloadReportZip(
     photos?: Array<{ id: string; photoType: string }>;
   },
 ): Promise<void> {
+  await downloadReportsZip([{ id: '', ...report }], 10);
+}
+
+export async function downloadReportsZip(
+  reports: Array<{
+    id: string;
+    reportNumber: string;
+    areaName?: string;
+    reporterName: string;
+    submittedAt: string | null;
+    photos?: Array<{ id: string; photoType: string }>;
+  }>,
+  maxPhotos = 100,
+): Promise<void> {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
-  const meta = {
-    reportNumber: report.reportNumber,
-    area: report.areaName,
-    reporter: report.reporterName,
-    submittedAt: report.submittedAt,
-  };
-  zip.file('metadata.json', JSON.stringify(meta, null, 2));
+  let photoCount = 0;
 
-  for (const photo of report.photos ?? []) {
-    const response = await fetch(`/api/photos/reports/${photo.id}`, { credentials: 'include' });
-    if (response.ok) {
-      const blob = await response.blob();
-      zip.file(`${photo.photoType.toLowerCase()}.jpg`, blob);
+  for (const report of reports) {
+    const folder = zip.folder(report.reportNumber);
+    if (!folder) continue;
+    folder.file(
+      'metadata.json',
+      JSON.stringify(
+        {
+          reportNumber: report.reportNumber,
+          area: report.areaName,
+          reporter: report.reporterName,
+          submittedAt: report.submittedAt,
+        },
+        null,
+        2,
+      ),
+    );
+
+    for (const photo of report.photos ?? []) {
+      if (photoCount >= maxPhotos) break;
+      const response = await fetch(`/api/photos/reports/${photo.id}`, { credentials: 'include' });
+      if (response.ok) {
+        const blob = await response.blob();
+        folder.file(`${photo.photoType.toLowerCase()}.webp`, blob);
+        photoCount++;
+      }
     }
+    if (photoCount >= maxPhotos) break;
   }
 
   const content = await zip.generateAsync({ type: 'blob' });
   const url = URL.createObjectURL(content);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${report.reportNumber}.zip`;
+  a.download = `laporan-${new Date().toISOString().slice(0, 10)}.zip`;
   a.click();
   URL.revokeObjectURL(url);
 }

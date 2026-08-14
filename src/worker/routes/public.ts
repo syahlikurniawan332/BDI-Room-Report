@@ -13,6 +13,7 @@ import {
   validatePhotoFile,
   sha256Hex,
 } from '../lib/photos';
+import { notifyAdmins } from '../lib/notifications';
 
 export const publicRoutes = new Hono<AppContext>();
 
@@ -96,6 +97,19 @@ publicRoutes.post('/complaints', async (c) => {
       )
       .run();
   }
+
+  const areaName = await c.env.DB.prepare('SELECT name FROM areas WHERE id = ?')
+    .bind(areaId)
+    .first<{ name: string }>();
+
+  await notifyAdmins(
+    c.env.DB,
+    'COMPLAINT_NEW',
+    'Pengaduan baru',
+    `${complaintNumber} — ${areaName?.name ?? 'Area'}`,
+    'complaint',
+    id,
+  );
 
   return c.json({ complaintNumber, message: 'Pengaduan berhasil dikirim.' }, 201);
 });

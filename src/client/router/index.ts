@@ -15,6 +15,10 @@ const router = createRouter({
         { path: 'laporan/baru', name: 'cs-report-new', component: () => import('../views/cs/ReportFormView.vue') },
         { path: 'laporan/:id', name: 'cs-report-detail', component: () => import('../views/cs/ReportFormView.vue') },
         { path: 'draft/:localId', name: 'cs-local-draft', component: () => import('../views/cs/ReportFormView.vue') },
+        { path: 'draft', name: 'cs-drafts', component: () => import('../views/cs/DraftsView.vue') },
+        { path: 'perbaikan', name: 'cs-revisions', component: () => import('../views/cs/RevisionsView.vue') },
+        { path: 'riwayat', name: 'cs-history', component: () => import('../views/cs/HistoryView.vue') },
+        { path: 'notifikasi', name: 'cs-notifications', component: () => import('../views/cs/NotificationsView.vue') },
       ],
     },
     {
@@ -28,6 +32,7 @@ const router = createRouter({
         { path: 'pengguna', name: 'admin-users', component: () => import('../views/admin/UsersView.vue') },
         { path: 'area', name: 'admin-areas', component: () => import('../views/admin/AreasView.vue') },
         { path: 'libur', name: 'admin-holidays', component: () => import('../views/admin/HolidaysView.vue') },
+        { path: 'notifikasi', name: 'admin-notifications', component: () => import('../views/admin/NotificationsView.vue') },
       ],
     },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue') },

@@ -9,6 +9,8 @@ import { holidayRoutes } from './holidays';
 import { settingsRoutes } from './settings';
 import { photoRoutes } from './photos';
 import { publicRoutes } from './public';
+import { notificationRoutes } from './notifications';
+import { dashboardRoutes } from './dashboard';
 import { authMiddleware } from '../middleware/auth';
 
 export const api = new Hono<AppContext>();
@@ -27,6 +29,8 @@ api.route('/reports', reportRoutes);
 api.route('/complaints', complaintRoutes);
 api.route('/holidays', holidayRoutes);
 api.route('/settings', settingsRoutes);
+api.route('/notifications', notificationRoutes);
+api.route('/dashboard', dashboardRoutes);
 
 api.get('/me', (c) => {
   const user = c.get('user');

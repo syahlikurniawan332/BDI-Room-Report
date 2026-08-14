@@ -1,56 +1,203 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onBeforeUnmount, ref } from 'vue';
+import { compressToWebp } from '../lib/image';
+
+export type UploadStatus = 'idle' | 'local' | 'uploading' | 'saved' | 'failed';
 
 const props = defineProps<{
   label?: string;
-  accept?: string;
   previewUrl?: string | null;
+  mode?: 'camera' | 'gallery';
+  status?: UploadStatus;
+  disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
   capture: [file: File, capturedAt: string];
+  retry: [];
 }>();
 
+const videoRef = ref<HTMLVideoElement | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
 const localPreview = ref<string | null>(null);
+const streaming = ref(false);
+const stream = ref<MediaStream | null>(null);
+const locked = ref(false);
 
-function openPicker() {
+const statusLabels: Record<UploadStatus, string> = {
+  idle: '',
+  local: 'Tersimpan di perangkat',
+  uploading: 'Sedang diunggah',
+  saved: 'Berhasil disimpan',
+  failed: 'Gagal — coba lagi',
+};
+
+function stopStream() {
+  stream.value?.getTracks().forEach((t) => t.stop());
+  stream.value = null;
+  streaming.value = false;
+}
+
+async function startCamera() {
+  if (props.disabled || locked.value) return;
+  stopStream();
+  try {
+    const media = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false,
+    });
+    stream.value = media;
+    streaming.value = true;
+    if (videoRef.value) {
+      videoRef.value.srcObject = media;
+      await videoRef.value.play();
+    }
+  } catch {
+    alert('Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.');
+  }
+}
+
+async function captureFromCamera() {
+  if (!videoRef.value) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = videoRef.value.videoWidth;
+  canvas.height = videoRef.value.videoHeight;
+  canvas.getContext('2d')?.drawImage(videoRef.value, 0, 0);
+  stopStream();
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+  if (!blob) return;
+
+  const file = await compressToWebp(blob);
+  localPreview.value = URL.createObjectURL(file);
+  locked.value = true;
+  emit('capture', file, new Date().toISOString());
+}
+
+function openGallery() {
+  if (props.disabled || locked.value) return;
   inputRef.value?.click();
 }
 
-function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
+async function onGalleryChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0];
   if (!file) return;
-  localPreview.value = URL.createObjectURL(file);
-  emit('capture', file, new Date().toISOString());
-  input.value = '';
+  const compressed = await compressToWebp(file);
+  localPreview.value = URL.createObjectURL(compressed);
+  locked.value = true;
+  emit('capture', compressed, new Date().toISOString());
+  (event.target as HTMLInputElement).value = '';
 }
+
+function retake() {
+  if (localPreview.value) URL.revokeObjectURL(localPreview.value);
+  localPreview.value = null;
+  locked.value = false;
+  stopStream();
+}
+
+function onRetry() {
+  emit('retry');
+}
+
+onBeforeUnmount(() => {
+  stopStream();
+  if (localPreview.value) URL.revokeObjectURL(localPreview.value);
+});
 </script>
 
 <template>
   <div class="space-y-2">
-    <label v-if="label" class="label">{{ label }}</label>
+    <div class="flex items-center justify-between">
+      <label v-if="label" class="label mb-0">{{ label }}</label>
+      <span
+        v-if="status && status !== 'idle'"
+        class="text-xs font-medium"
+        :class="{
+          'text-slate-500': status === 'local',
+          'text-blue-600': status === 'uploading',
+          'text-green-600': status === 'saved',
+          'text-red-600': status === 'failed',
+        }"
+      >
+        {{ statusLabels[status] }}
+      </span>
+    </div>
+
     <div
-      class="flex min-h-48 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4"
+      class="flex min-h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4"
     >
+      <video
+        v-if="streaming && mode !== 'gallery'"
+        ref="videoRef"
+        playsinline
+        muted
+        class="mb-3 max-h-64 w-full rounded-lg object-contain"
+      />
       <img
-        v-if="localPreview || previewUrl"
+        v-else-if="localPreview || previewUrl"
         :src="localPreview || previewUrl || undefined"
         alt="Preview"
         class="mb-3 max-h-64 rounded-lg object-contain"
       />
-      <button type="button" class="btn-primary" @click="openPicker">
-        {{ localPreview || previewUrl ? 'Ambil Ulang Foto' : 'Ambil / Pilih Foto' }}
+
+      <template v-if="mode === 'gallery'">
+        <button
+          v-if="!locked"
+          type="button"
+          class="btn-primary min-h-12 px-6 text-base"
+          :disabled="disabled"
+          @click="openGallery"
+        >
+          Pilih Foto
+        </button>
+        <input
+          ref="inputRef"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          class="hidden"
+          @change="onGalleryChange"
+        />
+      </template>
+
+      <template v-else>
+        <template v-if="!locked">
+          <button
+            v-if="!streaming"
+            type="button"
+            class="btn-primary min-h-12 w-full max-w-xs px-6 text-base"
+            :disabled="disabled"
+            @click="startCamera"
+          >
+            Buka Kamera
+          </button>
+          <button
+            v-else
+            type="button"
+            class="btn-primary min-h-12 w-full max-w-xs px-6 text-base"
+            @click="captureFromCamera"
+          >
+            Ambil Foto
+          </button>
+        </template>
+        <button
+          v-if="locked && status !== 'uploading'"
+          type="button"
+          class="btn-secondary mt-2 min-h-12 w-full max-w-xs text-base"
+          @click="retake"
+        >
+          Ambil Ulang
+        </button>
+      </template>
+
+      <button
+        v-if="status === 'failed'"
+        type="button"
+        class="btn-primary mt-2 min-h-12 w-full max-w-xs text-base"
+        @click="onRetry"
+      >
+        Coba Unggah Lagi
       </button>
-      <input
-        ref="inputRef"
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        capture="environment"
-        class="hidden"
-        @change="onFileChange"
-      />
     </div>
   </div>
 </template>
