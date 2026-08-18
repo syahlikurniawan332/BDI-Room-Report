@@ -6,26 +6,27 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist/client",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "bdi-cleaning-control",
       "database_id": "local-dev-placeholder",
-      "migrations_dir": "database-bdi-cleaning/migrations"
-    }
+      "migrations_dir": "database-bdi-cleaning/migrations",
+    },
   ],
   "r2_buckets": [
     {
       "binding": "PHOTO_BUCKET",
-      "bucket_name": "bdi-cleaning-photos"
-    }
+      "bucket_name": "bdi-cleaning-photos",
+    },
   ],
   "triggers": {
-    "crons": ["0 1 * * *"]
+    "crons": ["0 1 * * *"],
   },
   "vars": {
-    "APP_ENV": "development"
-  }
+    "APP_ENV": "development",
+  },
 }
