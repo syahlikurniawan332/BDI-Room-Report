@@ -95,11 +95,16 @@ reportRoutes.get('/', async (c) => {
 
   if (conditions.length) sql += ` WHERE ${conditions.join(' AND ')}`;
   sql += ' ORDER BY r.updated_at DESC LIMIT 200';
-  const rows = await c.env.DB.prepare(sql).bind(...binds).all();
+  const rows = await c.env.DB
+  .prepare(sql)
+  .bind(...binds)
+  .all<DbReport & { area_name: string }>();
 
-  return c.json({
-    reports: (rows.results ?? []).map((r) => mapReport(r as DbReport & { area_name: string })),
-  });
+return c.json({
+  reports: (rows.results ?? []).map((row) =>
+    mapReport(row),
+  ),
+});
 });
 
 reportRoutes.get('/:id', async (c) => {
