@@ -25,5 +25,3 @@ CREATE TABLE IF NOT EXISTS idempotency_keys (
 
 CREATE INDEX IF NOT EXISTS idx_idempotency_expires
     ON idempotency_keys(expires_at);
-
-PRAGMA user_version = 2;

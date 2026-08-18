@@ -228,5 +228,3 @@ CREATE TABLE IF NOT EXISTS app_settings (
     description TEXT,
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
-
-PRAGMA user_version = 1;
