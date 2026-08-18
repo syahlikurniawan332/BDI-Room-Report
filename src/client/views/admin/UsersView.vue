@@ -3,7 +3,11 @@ import { onMounted, ref } from 'vue';
 import { apiGet, apiPatch, apiPost } from '../../lib/api';
 import { formatWib } from '../../lib/utils';
 import type { UserPublic } from '@shared/constants';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../../stores/auth';
 
+const auth = useAuthStore();
+const router = useRouter();
 const users = ref<UserPublic[]>([]);
 const showCreate = ref(false);
 const tempPassword = ref('');
@@ -51,10 +55,41 @@ async function toggleActive(user: UserPublic) {
 }
 
 async function resetPassword(user: UserPublic) {
-  const data = await apiPost<{ temporaryPassword: string }>(`/users/${user.id}/reset-password`, {
-    generatePassword: true,
-  });
-  tempPassword.value = data.temporaryPassword;
+  const isOwnAccount = user.id === auth.user?.id;
+  error.value = '';
+
+  const password = window.prompt(
+    `Masukkan password baru untuk ${user.displayName}:`,
+  );
+
+  if (password === null) return;
+
+  if (password.length < 8) {
+    error.value = 'Password minimal 8 karakter.';
+    return;
+  }
+
+  try {
+    const data = await apiPost<{ temporaryPassword: string }>(
+      `/users/${user.id}/reset-password`,
+      {
+        password,
+        generatePassword: false,
+      },
+    );
+
+    tempPassword.value = data.temporaryPassword;
+
+    await apiPost(`/users/${user.id}/revoke-sessions`);
+    if (isOwnAccount) {
+  await auth.logout();
+  await router.replace({ name: 'login' });
+  return;
+}
+  } catch (e) {
+    error.value =
+      e instanceof Error ? e.message : 'Gagal mereset password.';
+  }
 }
 
 async function revokeSessions(user: UserPublic) {
@@ -70,6 +105,13 @@ async function revokeSessions(user: UserPublic) {
         {{ showCreate ? 'Batal' : 'Tambah User' }}
       </button>
     </div>
+
+    <p
+      v-if="error"
+      class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+    >
+      {{ error }}
+    </p>
 
     <div v-if="tempPassword" class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
       Password sementara (tampil sekali): <strong>{{ tempPassword }}</strong>
@@ -91,7 +133,6 @@ async function revokeSessions(user: UserPublic) {
         </label>
         <input v-if="!form.generatePassword" v-model="form.password" class="input mt-2" type="password" />
       </div>
-      <p v-if="error" class="md:col-span-2 text-sm text-red-600">{{ error }}</p>
       <button type="submit" class="btn-primary md:col-span-2">Simpan</button>
     </form>
 
@@ -113,8 +154,8 @@ async function revokeSessions(user: UserPublic) {
             <td class="py-2 pr-3">{{ user.role }}</td>
             <td class="py-2 pr-3">{{ formatWib(user.lastLoginAt) }}</td>
             <td class="py-2 space-x-2">
-              <button type="button" class="text-primary-600" @click="resetPassword(user)">Reset PW</button>
-              <button type="button" class="text-primary-600" @click="revokeSessions(user)">Logout Paksa</button>
+              <button type="button" class="text-primary-600" @click="resetPassword(user)">Reset Password</button>
+              <button type="button" class="text-primary-600" @click="revokeSessions(user)">Logout Pengguna</button>
               <button type="button" class="text-primary-600" @click="toggleActive(user)">
                 {{ user.isActive ? 'Nonaktifkan' : 'Aktifkan' }}
               </button>
