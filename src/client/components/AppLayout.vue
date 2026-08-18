@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell.vue';
 import { computed } from 'vue';
 
 const auth = useAuthStore();
+const router = useRouter();
+
+async function handleLogout() {
+  try {
+    await auth.logout();
+  } finally {
+    await router.replace({ name: 'login' });
+  }
+}
 
 const basePath = computed(() => (auth.isAdmin ? '/admin' : '/cs'));
 
@@ -61,7 +70,7 @@ const adminLinks = [
             </RouterLink>
             <NotificationBell />
             <span class="hidden text-slate-500 sm:inline">{{ auth.user?.displayName }}</span>
-            <button class="btn-secondary" @click="auth.logout()">Keluar</button>
+            <button class="btn-secondary" @click="handleLogout">Keluar</button>
           </template>
           <RouterLink v-else to="/login" class="btn-primary">Masuk</RouterLink>
         </nav>
