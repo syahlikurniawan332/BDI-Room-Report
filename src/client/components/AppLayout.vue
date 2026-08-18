@@ -87,18 +87,18 @@ async function handleLogout() {
         <nav
           class="flex min-w-0 items-center justify-end gap-1.5 text-sm"
         >
-          <!-- Pengaduan publik -->
-          <RouterLink
-            to="/pengaduan"
-            class="hidden rounded-full px-3 py-2 font-medium transition sm:inline-flex"
-            :class="
-              isActiveLink('/pengaduan')
-                ? 'bg-[#17233d] text-white shadow-sm'
-                : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
-            "
-          >
-            Pengaduan Publik
-          </RouterLink>
+        <RouterLink
+          v-if="!auth.isAuthenticated"
+          to="/pengaduan"
+          class="hidden rounded-full px-3 py-2 font-medium transition sm:inline-flex"
+          :class="
+            isActiveLink('/pengaduan')
+              ? 'bg-[#17233d] text-white shadow-sm'
+              : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
+          "
+        >
+          Pengaduan Publik
+        </RouterLink>
 
           <template v-if="auth.isAuthenticated">
             <!-- Menu CS -->
