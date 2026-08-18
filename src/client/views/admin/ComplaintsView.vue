@@ -5,12 +5,8 @@ import StatusBadge from '../../components/StatusBadge.vue';
 import { formatWib, COMPLAINT_STATUS_LABELS } from '../../lib/utils';
 import type { ComplaintPublic } from '@shared/constants';
 
-interface ComplaintDetail extends ComplaintPublic {
-  photo?: { id: string } | null;
-}
-
 const complaints = ref<ComplaintPublic[]>([]);
-const selected = ref<ComplaintDetail | null>(null);
+const selected = ref<ComplaintPublic | null>(null);
 const status = ref<ComplaintPublic['status']>('IN_PROGRESS');
 const adminNote = ref('');
 const loading = ref(true);
@@ -21,7 +17,7 @@ async function loadList() {
 }
 
 async function openDetail(id: string) {
-  const data = await apiGet<{ complaint: ComplaintDetail }>(`/complaints/${id}`);
+  const data = await apiGet<{ complaint: ComplaintPublic }>(`/complaints/${id}`);
   selected.value = data.complaint;
   status.value = data.complaint.status;
   adminNote.value = data.complaint.adminNote ?? '';

@@ -3,7 +3,6 @@ import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { apiGet } from '../../lib/api';
 import StatusBadge from '../../components/StatusBadge.vue';
-import { formatWib } from '../../lib/utils';
 import type { ReportPublic } from '@shared/constants';
 
 const reports = ref<ReportPublic[]>([]);

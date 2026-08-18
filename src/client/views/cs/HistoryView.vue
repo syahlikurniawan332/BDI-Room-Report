@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { apiGet } from '../../lib/api';
 import StatusBadge from '../../components/StatusBadge.vue';
