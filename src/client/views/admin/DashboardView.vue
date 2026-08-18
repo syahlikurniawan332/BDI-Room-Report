@@ -9,7 +9,7 @@ interface CsActivity {
   displayName: string;
   username: string;
   lastSubmittedAt: string | null;
-  activeDrafts: number;
+  lastStatus: string | null;
 }
 
 const stats = ref({
@@ -19,10 +19,27 @@ const stats = ref({
   approved: 0,
   rejected: 0,
   newComplaints: 0,
-  activeDrafts: 0,
+  notReportedToday: 0,
 });
 const csActivity = ref<CsActivity[]>([]);
 const loading = ref(true);
+
+function formatReportStatus(status: string | null): string {
+  switch (status) {
+    case 'SUBMITTED':
+      return 'Menunggu Review';
+    case 'RESUBMITTED':
+      return 'Dikirim Ulang';
+    case 'REVISION_REQUIRED':
+      return 'Perlu Perbaikan';
+    case 'APPROVED':
+      return 'Disetujui';
+    case 'REJECTED':
+      return 'Ditolak';
+    default:
+      return 'Belum Ada Laporan';
+  }
+}
 
 onMounted(async () => {
   try {
@@ -67,8 +84,10 @@ onMounted(async () => {
         <p class="text-2xl font-bold text-red-700">{{ loading ? '...' : stats.rejected }}</p>
       </div>
       <div class="card">
-        <p class="text-sm text-slate-500">Draft Aktif (Semua CS)</p>
-        <p class="text-2xl font-bold">{{ loading ? '...' : stats.activeDrafts }}</p>
+        <p class="text-sm text-slate-500">Belum Melapor Hari Ini</p>
+        <p class="text-2xl font-bold text-amber-600">
+          {{ loading ? '...' : stats.notReportedToday }}
+        </p>
       </div>
     </div>
 
@@ -80,7 +99,7 @@ onMounted(async () => {
             <th class="py-2 pr-4">Nama</th>
             <th class="py-2 pr-4">Username</th>
             <th class="py-2 pr-4">Laporan Terakhir</th>
-            <th class="py-2">Draft Aktif</th>
+            <th class="py-2">Status Terakhir</th>
           </tr>
         </thead>
         <tbody>
@@ -88,19 +107,29 @@ onMounted(async () => {
             <td class="py-2 pr-4">{{ cs.displayName }}</td>
             <td class="py-2 pr-4">{{ cs.username }}</td>
             <td class="py-2 pr-4">{{ formatWib(cs.lastSubmittedAt) }}</td>
-            <td class="py-2">{{ cs.activeDrafts }}</td>
+            <td class="py-2">
+              {{ cs.lastStatus ?? 'Belum Ada Laporan' }}
+            </td>
           </tr>
         </tbody>
       </table>
     </section>
 
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      <RouterLink to="/admin/laporan" class="card hover:border-primary-300">Kelola Laporan</RouterLink>
-      <RouterLink to="/admin/pengaduan" class="card hover:border-primary-300">Kelola Pengaduan</RouterLink>
-      <RouterLink to="/admin/pengguna" class="card hover:border-primary-300">Kelola Pengguna</RouterLink>
+      <RouterLink to="/admin/laporan" class="card hover:border-primary-300"
+        >Kelola Laporan</RouterLink
+      >
+      <RouterLink to="/admin/pengaduan" class="card hover:border-primary-300"
+        >Kelola Pengaduan</RouterLink
+      >
+      <RouterLink to="/admin/pengguna" class="card hover:border-primary-300"
+        >Kelola Pengguna</RouterLink
+      >
       <RouterLink to="/admin/area" class="card hover:border-primary-300">Kelola Area</RouterLink>
       <RouterLink to="/admin/libur" class="card hover:border-primary-300">Kelola Libur</RouterLink>
-      <RouterLink to="/admin/notifikasi" class="card hover:border-primary-300">Notifikasi</RouterLink>
+      <RouterLink to="/admin/notifikasi" class="card hover:border-primary-300"
+        >Notifikasi</RouterLink
+      >
     </div>
   </div>
 </template>

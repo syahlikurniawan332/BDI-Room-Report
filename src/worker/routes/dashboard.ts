@@ -11,7 +11,6 @@ dashboardRoutes.get('/cs', async (c) => {
 
   const counts = await c.env.DB.prepare(
     `SELECT
-       SUM(CASE WHEN status = 'DRAFT' THEN 1 ELSE 0 END) AS drafts,
        SUM(CASE WHEN status IN ('SUBMITTED', 'RESUBMITTED') THEN 1 ELSE 0 END) AS pending,
        SUM(CASE WHEN status = 'REVISION_REQUIRED' THEN 1 ELSE 0 END) AS revision,
        SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END) AS approved
@@ -44,7 +43,13 @@ dashboardRoutes.get('/admin', async (c) => {
        SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) AS rejected,
        SUM(CASE WHEN status = 'DRAFT' THEN 1 ELSE 0 END) AS drafts
      FROM reports`,
-  ).first<{ pending: number; revision: number; approved: number; rejected: number; drafts: number }>();
+  ).first<{
+    pending: number;
+    revision: number;
+    approved: number;
+    rejected: number;
+    drafts: number;
+  }>();
 
   const todayRow = await c.env.DB.prepare(
     `SELECT COUNT(*) AS count FROM reports
@@ -59,19 +64,56 @@ dashboardRoutes.get('/admin', async (c) => {
   ).first<{ count: number }>();
 
   const csActivity = await c.env.DB.prepare(
-    `SELECT u.id, u.display_name, u.username,
-       (SELECT MAX(r.submitted_at) FROM reports r WHERE r.user_id = u.id AND r.submitted_at IS NOT NULL) AS last_submitted,
-       (SELECT COUNT(*) FROM reports r WHERE r.user_id = u.id AND r.status = 'DRAFT') AS active_drafts
-     FROM users u
-     WHERE u.role = 'CS' AND u.is_active = 1
-     ORDER BY u.display_name ASC`,
+    `SELECT
+     u.id,
+     u.display_name,
+     u.username,
+
+     (
+       SELECT r.submitted_at
+       FROM reports r
+       WHERE r.user_id = u.id
+         AND r.submitted_at IS NOT NULL
+       ORDER BY r.submitted_at DESC
+       LIMIT 1
+     ) AS last_submitted,
+
+     (
+       SELECT r.status
+       FROM reports r
+       WHERE r.user_id = u.id
+         AND r.submitted_at IS NOT NULL
+       ORDER BY r.submitted_at DESC
+       LIMIT 1
+     ) AS last_status
+
+   FROM users u
+   WHERE u.role = 'CS'
+     AND u.is_active = 1
+   ORDER BY u.display_name ASC`,
   ).all<{
     id: string;
     display_name: string;
     username: string;
     last_submitted: string | null;
-    active_drafts: number;
+    last_status: string | null;
   }>();
+
+  const notReportedToday = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS count
+   FROM users u
+   WHERE u.role = 'CS'
+     AND u.is_active = 1
+     AND NOT EXISTS (
+       SELECT 1
+       FROM reports r
+       WHERE r.user_id = u.id
+         AND r.submitted_at IS NOT NULL
+         AND date(r.submitted_at, '+7 hours') = ?
+     )`,
+  )
+    .bind(todayWib)
+    .first<{ count: number }>();
 
   return c.json({
     stats: {
@@ -81,14 +123,14 @@ dashboardRoutes.get('/admin', async (c) => {
       approved: counts?.approved ?? 0,
       rejected: counts?.rejected ?? 0,
       newComplaints: newComplaints?.count ?? 0,
-      activeDrafts: counts?.drafts ?? 0,
+      notReportedToday: notReportedToday?.count ?? 0,
     },
     csActivity: (csActivity.results ?? []).map((row) => ({
       id: row.id,
       displayName: row.display_name,
       username: row.username,
       lastSubmittedAt: row.last_submitted,
-      activeDrafts: row.active_drafts,
+      lastStatus: row.last_status,
     })),
   });
 });
