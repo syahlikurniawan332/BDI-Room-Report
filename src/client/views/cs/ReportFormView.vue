@@ -228,79 +228,162 @@ async function submitReport() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-4">
-    <div class="text-center">
-      <h1 class="text-lg font-bold uppercase tracking-wide text-primary-800">
-        Form Controling Cleaning Service
-      </h1>
-      <p class="text-sm font-medium text-slate-600">Balai Diklat Industri Medan</p>
-    </div>
-
-    <div class="flex items-center justify-between">
-      <div>
-        <h2 class="text-xl font-bold">{{ isNew || isLocalDraft ? 'Laporan Baru' : 'Detail Laporan' }}</h2>
-        <p v-if="report" class="text-sm text-slate-600">{{ report.reportNumber }}</p>
-      </div>
-      <StatusBadge v-if="report" :status="report.status" />
-    </div>
-
-    <div class="card space-y-4">
-      <div class="grid gap-4 md:grid-cols-2">
-        <div>
-          <label class="label">Nama Pegawai CS</label>
-          <input class="input bg-slate-50" :value="auth.user?.displayName" readonly />
-        </div>
-        <div>
-          <label class="label">Email CS</label>
-          <input class="input bg-slate-50" :value="auth.user?.email" readonly />
-        </div>
-      </div>
-
-      <div>
-        <label class="label">Area</label>
-        <select v-model="areaId" class="input" :disabled="!canEdit || !!report?.id">
-          <option value="">Pilih area...</option>
-          <option v-for="area in areas" :key="area.id" :value="area.id">{{ area.name }}</option>
-        </select>
-      </div>
-
-      <PhotoCapture
-        label="Foto Before"
-        mode="camera"
-        :preview-url="beforePreview"
-        :status="beforeStatus"
-        :disabled="!canEdit"
-        @capture="(file, at) => handlePhotoCapture('before', file, at)"
-        @retry="retryUpload('before')"
-      />
-      <PhotoCapture
-        label="Foto After"
-        mode="camera"
-        :preview-url="afterPreview"
-        :status="afterStatus"
-        :disabled="!canEdit || !hasBeforeOnServer"
-        @capture="(file, at) => handlePhotoCapture('after', file, at)"
-        @retry="retryUpload('after')"
-      />
-
-      <p v-if="report?.adminNote" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-        Catatan admin: {{ report.adminNote }}
+  <div class="mx-auto max-w-4xl space-y-6">
+    <div
+      class="rounded-2xl bg-[#17233d] px-6 py-6 text-white shadow-[0_16px_40px_rgba(23,35,61,0.16)] sm:px-8"
+    >
+      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#d8c9a7]">
+        Balai Diklat Industri Medan
       </p>
-      <p v-if="message" class="text-sm text-green-700">{{ message }}</p>
-      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
 
-      <div class="flex flex-col gap-3 sm:flex-row">
-        <button
-          v-if="canEdit"
-          type="button"
-          class="btn-primary min-h-14 flex-1 text-base"
-          :disabled="!canSubmit"
-          @click="submitReport"
-        >
-          {{ submitting ? 'Mengirim...' : 'Kirim Laporan' }}
-        </button>
-        <RouterLink to="/cs" class="btn-secondary min-h-14 text-center">Kembali</RouterLink>
+      <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold">
+            {{ isNew || isLocalDraft ? 'Laporan Kebersihan Baru' : 'Detail Laporan' }}
+          </h1>
+          <p v-if="report" class="mt-1 text-sm text-slate-300">
+            {{ report.reportNumber }}
+          </p>
+          <p v-else class="mt-1 text-sm text-slate-300">
+            Dokumentasikan kondisi sebelum dan sesudah pembersihan.
+          </p>
+        </div>
+
+        <StatusBadge v-if="report" :status="report.status" />
       </div>
+    </div>
+
+    <section
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+    >
+      <div class="border-b border-[#eee7d8] px-6 py-5">
+        <h2 class="font-semibold text-[#17233d]">Informasi laporan</h2>
+        <p class="mt-1 text-sm text-slate-500">
+          Pastikan area yang dipilih sudah sesuai sebelum mengambil foto.
+        </p>
+      </div>
+
+      <div class="space-y-6 p-6">
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label class="label">Nama Pegawai CS</label>
+            <input
+              class="input bg-[#fdfbf6] text-slate-600"
+              :value="auth.user?.displayName"
+              readonly
+            />
+          </div>
+
+          <div>
+            <label class="label">Email CS</label>
+            <input
+              class="input bg-[#fdfbf6] text-slate-600"
+              :value="auth.user?.email"
+              readonly
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="label">Area</label>
+          <select
+            v-model="areaId"
+            class="input"
+            :disabled="!canEdit || !!report?.id"
+          >
+            <option value="">Pilih area...</option>
+            <option v-for="area in areas" :key="area.id" :value="area.id">
+              {{ area.name }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+    >
+      <div class="border-b border-[#eee7d8] px-6 py-5">
+        <h2 class="font-semibold text-[#17233d]">Dokumentasi kebersihan</h2>
+        <p class="mt-1 text-sm text-slate-500">
+          Ambil foto kondisi sebelum dan setelah pembersihan.
+        </p>
+      </div>
+
+      <div class="grid gap-5 p-6 md:grid-cols-2">
+        <div class="rounded-xl border border-[#e4dccb] bg-[#fdfbf6] p-4">
+          <p class="mb-3 text-sm font-semibold text-[#17233d]">
+            1. Foto Before
+          </p>
+          <PhotoCapture
+            label="Foto Before"
+            mode="camera"
+            :preview-url="beforePreview"
+            :status="beforeStatus"
+            :disabled="!canEdit"
+            @capture="(file, at) => handlePhotoCapture('before', file, at)"
+            @retry="retryUpload('before')"
+          />
+        </div>
+
+        <div class="rounded-xl border border-[#e4dccb] bg-[#fdfbf6] p-4">
+          <p class="mb-3 text-sm font-semibold text-[#17233d]">
+            2. Foto After
+          </p>
+          <PhotoCapture
+            label="Foto After"
+            mode="camera"
+            :preview-url="afterPreview"
+            :status="afterStatus"
+            :disabled="!canEdit || !hasBeforeOnServer"
+            @capture="(file, at) => handlePhotoCapture('after', file, at)"
+            @retry="retryUpload('after')"
+          />
+        </div>
+      </div>
+    </section>
+
+    <p
+      v-if="report?.adminNote"
+      class="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-950"
+    >
+      <span class="font-semibold">Catatan admin:</span>
+      {{ report.adminNote }}
+    </p>
+
+    <p
+      v-if="message"
+      class="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800"
+    >
+      {{ message }}
+    </p>
+
+    <p
+      v-if="error"
+      class="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700"
+    >
+      {{ error }}
+    </p>
+
+    <div
+      class="flex flex-col-reverse gap-3 border-t border-[#e4dccb] pt-6 sm:flex-row sm:justify-between"
+    >
+      <RouterLink
+        to="/cs"
+        class="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#cbd5e1] bg-white px-5 text-sm font-semibold text-[#17233d] transition hover:border-[#17233d] hover:bg-[#fdfbf6]"
+      >
+        Kembali
+      </RouterLink>
+
+      <button
+        v-if="canEdit"
+        type="button"
+        class="min-h-12 rounded-xl bg-[#17233d] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#243557] disabled:cursor-not-allowed disabled:opacity-60"
+        :disabled="!canSubmit"
+        @click="submitReport"
+      >
+        {{ submitting ? 'Mengirim laporan...' : 'Kirim Laporan' }}
+      </button>
     </div>
   </div>
 </template>

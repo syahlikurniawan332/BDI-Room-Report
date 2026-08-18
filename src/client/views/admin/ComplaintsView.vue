@@ -40,62 +40,191 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <h1 class="text-2xl font-bold">Pengaduan Masyarakat</h1>
+  <div class="space-y-6">
+    <div>
+      <p
+        class="text-xs font-semibold uppercase tracking-[0.2em] text-[#a38a59]"
+      >
+        Administrasi
+      </p>
+      <h1 class="mt-1 text-2xl font-bold text-[#17233d]">
+        Pengaduan Masyarakat
+      </h1>
+      <p class="mt-2 text-sm text-slate-500">
+        Tinjau pengaduan yang dikirim melalui formulir publik.
+      </p>
+    </div>
 
-    <div class="grid gap-4 lg:grid-cols-2">
-      <div class="card overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead>
-            <tr class="border-b text-left text-slate-500">
-              <th class="py-2 pr-3">No.</th>
-              <th class="py-2 pr-3">Area</th>
-              <th class="py-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading"><td colspan="3">Memuat...</td></tr>
-            <tr
-              v-for="item in complaints"
-              :key="item.id"
-              class="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
-              @click="openDetail(item.id)"
+    <div class="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+      <!-- Daftar pengaduan -->
+      <section
+        class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+      >
+        <div
+          class="flex items-center justify-between border-b border-[#eee7d8] px-5 py-4"
+        >
+          <h2 class="font-semibold text-[#17233d]">Daftar pengaduan</h2>
+          <span
+            class="rounded-full bg-[#f3ecdc] px-3 py-1 text-xs font-semibold text-[#17233d]"
+          >
+            {{ complaints.length }} pengaduan
+          </span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead
+              class="bg-[#fdfbf6] text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
             >
-              <td class="py-2 pr-3">{{ item.complaintNumber }}</td>
-              <td class="py-2 pr-3">{{ item.areaName }}</td>
-              <td class="py-2"><StatusBadge :status="item.status" /></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              <tr>
+                <th class="px-5 py-3">No.</th>
+                <th class="px-4 py-3">Area</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-5 py-3" aria-label="Pilih" />
+              </tr>
+            </thead>
 
-      <div v-if="selected" class="card space-y-3">
-        <div class="flex items-center justify-between">
-          <h2 class="font-semibold">{{ selected.complaintNumber }}</h2>
-          <StatusBadge :status="selected.status" />
+            <tbody class="divide-y divide-[#eee7d8]">
+              <tr v-if="loading">
+                <td colspan="4" class="px-5 py-10 text-center text-slate-500">
+                  Memuat pengaduan...
+                </td>
+              </tr>
+
+              <tr v-else-if="!complaints.length">
+                <td colspan="4" class="px-5 py-10 text-center text-slate-500">
+                  Belum ada pengaduan.
+                </td>
+              </tr>
+
+              <tr
+                v-for="item in complaints"
+                :key="item.id"
+                class="cursor-pointer transition hover:bg-[#fdfbf6]"
+                :class="selected?.id === item.id ? 'bg-[#f3ecdc]/70' : ''"
+                @click="openDetail(item.id)"
+              >
+                <td class="px-5 py-4 font-medium text-[#17233d]">
+                  {{ item.complaintNumber }}
+                </td>
+                <td class="px-4 py-4">{{ item.areaName }}</td>
+                <td class="px-4 py-4">
+                  <StatusBadge :status="item.status" />
+                </td>
+                <td class="px-5 py-4 text-right text-lg text-[#17233d]">
+                  →
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <p class="text-sm text-slate-500">{{ formatWib(selected.submittedAt) }} — {{ selected.areaName }}</p>
-        <p class="whitespace-pre-wrap text-sm">{{ selected.complaintText }}</p>
-        <img
-          v-if="selected.photo"
-          :src="photoUrl(selected.photo.id, 'complaint')"
-          alt="Foto pengaduan"
-          class="max-h-64 rounded-lg object-contain"
-        />
-        <div>
-          <label class="label">Status</label>
-          <select v-model="status" class="input">
-            <option v-for="(label, key) in COMPLAINT_STATUS_LABELS" :key="key" :value="key">
-              {{ label }}
-            </option>
-          </select>
+      </section>
+
+      <!-- Detail pengaduan -->
+      <section
+        class="rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+      >
+        <div
+          v-if="!selected"
+          class="flex min-h-[380px] flex-col items-center justify-center px-6 text-center"
+        >
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-[#f3ecdc] text-xl text-[#17233d]"
+          >
+            →
+          </div>
+          <h2 class="mt-4 font-semibold text-[#17233d]">
+            Pilih pengaduan
+          </h2>
+          <p class="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+            Klik salah satu baris pengaduan untuk melihat detail dan
+            memperbarui statusnya.
+          </p>
         </div>
-        <div>
-          <label class="label">Catatan Admin</label>
-          <textarea v-model="adminNote" class="input min-h-20" />
-        </div>
-        <button type="button" class="btn-primary" @click="save">Simpan</button>
-      </div>
+
+        <template v-else>
+          <div
+            class="flex flex-wrap items-start justify-between gap-3 border-b border-[#eee7d8] px-5 py-4"
+          >
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Detail pengaduan
+              </p>
+              <h2 class="mt-1 font-semibold text-[#17233d]">
+                {{ selected.complaintNumber }}
+              </h2>
+            </div>
+
+            <StatusBadge :status="status" />
+          </div>
+
+          <div class="space-y-5 p-5">
+            <div
+              class="rounded-xl bg-[#fdfbf6] px-4 py-3 text-sm text-slate-600"
+            >
+              <span class="font-semibold text-[#17233d]">
+                {{ selected.areaName }}
+              </span>
+              <span class="mx-2 text-slate-300">•</span>
+              {{ formatWib(selected.submittedAt) }}
+            </div>
+
+            <div>
+              <p class="text-sm font-semibold text-[#17233d]">
+                Isi pengaduan
+              </p>
+              <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                {{ selected.complaintText }}
+              </p>
+            </div>
+
+            <div v-if="selected.photo">
+              <p class="mb-2 text-sm font-semibold text-[#17233d]">
+                Foto pendukung
+              </p>
+              <img
+                :src="photoUrl(selected.photo.id, 'complaint')"
+                alt="Foto pengaduan"
+                class="max-h-72 w-full rounded-xl border border-[#e4dccb] bg-[#fdfbf6] object-contain"
+              />
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="label">Status pengaduan</label>
+                <select v-model="status" class="input">
+                  <option
+                    v-for="(label, key) in COMPLAINT_STATUS_LABELS"
+                    :key="key"
+                    :value="key"
+                  >
+                    {{ label }}
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="label">Catatan admin</label>
+                <textarea
+                  v-model="adminNote"
+                  class="input min-h-[102px] resize-y"
+                  placeholder="Tambahkan catatan tindak lanjut..."
+                />
+              </div>
+            </div>
+
+            <div class="flex justify-end border-t border-[#eee7d8] pt-5">
+              <button
+                type="button"
+                class="rounded-xl bg-[#17233d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#243557]"
+                @click="save"
+              >
+                Simpan Perubahan
+              </button>
+            </div>
+          </div>
+        </template>
+      </section>
     </div>
   </div>
 </template>

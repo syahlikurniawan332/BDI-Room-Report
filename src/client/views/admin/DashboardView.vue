@@ -41,38 +41,107 @@ onMounted(async () => {
   <div class="space-y-6">
     <h1 class="text-2xl font-bold">Dashboard Admin</h1>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="card">
-        <p class="text-sm text-slate-500">Laporan Hari Ini</p>
-        <p class="text-2xl font-bold">{{ loading ? '...' : stats.todayReports }}</p>
-      </div>
-      <RouterLink to="/admin/laporan?status=SUBMITTED" class="card hover:border-primary-300">
-        <p class="text-sm text-slate-500">Menunggu Review</p>
-        <p class="text-2xl font-bold">{{ loading ? '...' : stats.pending }}</p>
-      </RouterLink>
-      <RouterLink to="/admin/laporan?status=REVISION_REQUIRED" class="card hover:border-amber-300">
-        <p class="text-sm text-slate-500">Perlu Perbaikan</p>
-        <p class="text-2xl font-bold">{{ loading ? '...' : stats.revision }}</p>
-      </RouterLink>
-      <RouterLink to="/admin/pengaduan?status=NEW" class="card hover:border-blue-300">
-        <p class="text-sm text-slate-500">Pengaduan Baru</p>
-        <p class="text-2xl font-bold">{{ loading ? '...' : stats.newComplaints }}</p>
-      </RouterLink>
-      <div class="card">
-        <p class="text-sm text-slate-500">Disetujui</p>
-        <p class="text-2xl font-bold text-green-700">{{ loading ? '...' : stats.approved }}</p>
-      </div>
-      <div class="card">
-        <p class="text-sm text-slate-500">Ditolak</p>
-        <p class="text-2xl font-bold text-red-700">{{ loading ? '...' : stats.rejected }}</p>
-      </div>
-      <div class="card">
-        <p class="text-sm text-slate-500">Belum Melapor Hari Ini</p>
-        <p class="text-2xl font-bold text-amber-600">
-          {{ loading ? '...' : stats.notReportedToday }}
-        </p>
-      </div>
-    </div>
+    <div
+  class="grid overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm sm:grid-cols-2 lg:grid-cols-4"
+>
+  <div class="border-b border-[#eee7d8] px-5 py-4 sm:border-r lg:border-b-0">
+    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      Laporan hari ini
+    </p>
+    <p class="mt-1 text-2xl font-bold text-[#17233d]">
+      {{ loading ? '...' : stats.todayReports }}
+    </p>
+  </div>
+
+  <div class="border-b border-[#eee7d8] px-5 py-4 lg:border-b-0 lg:border-r">
+    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      Disetujui
+    </p>
+    <p class="mt-1 text-2xl font-bold text-emerald-700">
+      {{ loading ? '...' : stats.approved }}
+    </p>
+  </div>
+
+  <div class="border-b border-[#eee7d8] px-5 py-4 sm:border-r lg:border-b-0">
+    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      Ditolak
+    </p>
+    <p class="mt-1 text-2xl font-bold text-red-700">
+      {{ loading ? '...' : stats.rejected }}
+    </p>
+  </div>
+
+  <div class="px-5 py-4">
+    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      Belum melapor
+    </p>
+    <p class="mt-1 text-2xl font-bold text-amber-600">
+      {{ loading ? '...' : stats.notReportedToday }}
+    </p>
+  </div>
+</div>
+
+<div class="grid gap-3 md:grid-cols-3">
+  <RouterLink
+    to="/admin/laporan?status=SUBMITTED"
+    class="group flex items-center justify-between rounded-2xl border border-[#e4dccb] bg-white px-5 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#17233d] hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#17233d]/10"
+  >
+    <span>
+      <span class="block text-sm font-semibold text-[#17233d]">
+        Menunggu Review
+      </span>
+      <span class="mt-1 block text-2xl font-bold text-[#17233d]">
+        {{ loading ? '...' : stats.pending }}
+      </span>
+    </span>
+    <span
+      class="flex h-9 w-9 items-center justify-center rounded-full bg-[#f3ecdc] text-lg text-[#17233d] transition group-hover:translate-x-1 group-hover:bg-[#17233d] group-hover:text-white"
+      aria-hidden="true"
+    >
+      →
+    </span>
+  </RouterLink>
+
+  <RouterLink
+    to="/admin/laporan?status=REVISION_REQUIRED"
+    class="group flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50/50 px-5 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-amber-200"
+  >
+    <span>
+      <span class="block text-sm font-semibold text-amber-900">
+        Perlu Perbaikan
+      </span>
+      <span class="mt-1 block text-2xl font-bold text-amber-700">
+        {{ loading ? '...' : stats.revision }}
+      </span>
+    </span>
+    <span
+      class="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-lg text-amber-800 transition group-hover:translate-x-1 group-hover:bg-amber-600 group-hover:text-white"
+      aria-hidden="true"
+    >
+      →
+    </span>
+  </RouterLink>
+
+  <RouterLink
+    to="/admin/pengaduan?status=NEW"
+    class="group flex items-center justify-between rounded-2xl border border-sky-200 bg-sky-50/50 px-5 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-500 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-sky-200"
+  >
+    <span>
+      <span class="block text-sm font-semibold text-sky-900">
+        Pengaduan Baru
+      </span>
+      <span class="mt-1 block text-2xl font-bold text-sky-700">
+        {{ loading ? '...' : stats.newComplaints }}
+      </span>
+    </span>
+    <span
+      class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-100 text-lg text-sky-800 transition group-hover:translate-x-1 group-hover:bg-sky-600 group-hover:text-white"
+      aria-hidden="true"
+    >
+      →
+    </span>
+  </RouterLink>
+</div>
 
     <section class="card overflow-x-auto">
       <h2 class="mb-3 font-semibold">Aktivitas CS</h2>

@@ -26,39 +26,92 @@ onMounted(load);
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Riwayat Laporan</h1>
-      <select v-model="statusFilter" class="input w-auto" @change="load">
-        <option value="">Semua</option>
-        <option value="SUBMITTED">Menunggu Review</option>
-        <option value="RESUBMITTED">Dikirim Ulang</option>
-        <option value="APPROVED">Disetujui</option>
-        <option value="REVISION_REQUIRED">Perlu Perbaikan</option>
-        <option value="REJECTED">Ditolak</option>
-      </select>
+  <div class="space-y-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[#a38a59]">
+          Cleaning Service
+        </p>
+        <h1 class="mt-1 text-2xl font-bold text-[#17233d]">
+          Riwayat Laporan
+        </h1>
+        <p class="mt-2 text-sm text-slate-500">
+          Lihat status seluruh laporan yang pernah dikirim.
+        </p>
+      </div>
+
+      <div class="w-full sm:w-60">
+        <label class="label">Filter status</label>
+        <select v-model="statusFilter" class="input" @change="load">
+          <option value="">Semua Status</option>
+          <option value="SUBMITTED">Menunggu Review</option>
+          <option value="RESUBMITTED">Dikirim Ulang</option>
+          <option value="APPROVED">Disetujui</option>
+          <option value="REVISION_REQUIRED">Perlu Perbaikan</option>
+          <option value="REJECTED">Ditolak</option>
+        </select>
+      </div>
     </div>
 
-    <div class="space-y-3">
-      <p v-if="loading" class="text-sm text-slate-500">Memuat...</p>
-      <p v-else-if="!reports.length" class="text-sm text-slate-500">Belum ada riwayat.</p>
-      <RouterLink
-        v-for="report in reports"
-        :key="report.id"
-        :to="`/cs/laporan/${report.id}`"
-        class="card block hover:border-primary-300"
+    <section
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+    >
+      <div class="border-b border-[#eee7d8] px-5 py-4">
+        <h2 class="font-semibold text-[#17233d]">Daftar laporan</h2>
+      </div>
+
+      <p
+        v-if="loading"
+        class="px-5 py-10 text-center text-sm text-slate-500"
       >
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="font-medium">{{ report.reportNumber }}</p>
-            <p class="text-sm text-slate-600">{{ report.areaName }}</p>
-            <p class="text-xs text-slate-500">{{ formatWib(report.submittedAt ?? report.updatedAt) }}</p>
-          </div>
-          <StatusBadge :status="report.status" />
-        </div>
-      </RouterLink>
-    </div>
+        Memuat riwayat laporan...
+      </p>
 
-    <RouterLink to="/cs" class="btn-secondary inline-flex">Kembali</RouterLink>
+      <p
+        v-else-if="!reports.length"
+        class="px-5 py-10 text-center text-sm text-slate-500"
+      >
+        Belum ada laporan pada kategori ini.
+      </p>
+
+      <div v-else class="divide-y divide-[#eee7d8]">
+        <RouterLink
+          v-for="report in reports"
+          :key="report.id"
+          :to="`/cs/laporan/${report.id}`"
+          class="group flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#fdfbf6]"
+        >
+          <span class="min-w-0">
+            <span class="block truncate font-semibold text-[#17233d]">
+              {{ report.reportNumber }}
+            </span>
+            <span class="mt-1 block text-sm text-slate-600">
+              {{ report.areaName }}
+            </span>
+            <span class="mt-1 block text-xs text-slate-400">
+              {{ formatWib(report.submittedAt ?? report.updatedAt) }}
+            </span>
+          </span>
+
+          <span class="flex shrink-0 items-center gap-3">
+            <StatusBadge :status="report.status" />
+            <span
+              class="text-lg text-[#17233d] transition group-hover:translate-x-1"
+              aria-hidden="true"
+            >
+              →
+            </span>
+          </span>
+        </RouterLink>
+      </div>
+    </section>
+
+    <RouterLink
+      to="/cs"
+      class="inline-flex items-center gap-2 rounded-xl border border-[#cbd5e1] bg-white px-4 py-2.5 text-sm font-semibold text-[#17233d] transition hover:border-[#17233d] hover:bg-[#fdfbf6]"
+    >
+      <span aria-hidden="true">←</span>
+      Kembali ke Dashboard
+    </RouterLink>
   </div>
 </template>

@@ -33,73 +33,247 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold">Dashboard CS</h1>
-        <p class="text-sm text-slate-600">Selamat datang, {{ auth.user?.displayName }}</p>
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.2em] text-[#a38a59]"
+        >
+          Cleaning Service
+        </p>
+        <h1 class="mt-1 text-2xl font-bold text-[#17233d]">
+          Dashboard CS
+        </h1>
+        <p class="mt-2 text-sm text-slate-500">
+          Selamat datang, {{ auth.user?.displayName }}
+        </p>
       </div>
-      <RouterLink to="/cs/laporan/baru" class="btn-primary min-h-12 px-6 text-base">
+
+      <RouterLink
+        to="/cs/laporan/baru"
+        class="inline-flex items-center gap-2 rounded-xl bg-[#17233d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#243557]"
+      >
+        <span class="text-lg leading-none" aria-hidden="true">+</span>
         Buat Laporan Baru
       </RouterLink>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
-      <RouterLink to="/cs/draft" class="card hover:border-primary-300">
-        <p class="text-sm text-slate-500">Draft</p>
-        <p class="text-2xl font-bold">{{ loading ? '...' : stats.drafts }}</p>
-      </RouterLink>
-      <RouterLink to="/cs/riwayat?status=SUBMITTED" class="card hover:border-primary-300">
-        <p class="text-sm text-slate-500">Menunggu Review</p>
-        <p class="text-2xl font-bold">{{ loading ? '...' : stats.pending }}</p>
-      </RouterLink>
-      <RouterLink to="/cs/perbaikan" class="card hover:border-amber-300">
-        <p class="text-sm text-slate-500">Perlu Perbaikan</p>
-        <p class="text-2xl font-bold text-amber-700">{{ loading ? '...' : stats.revision }}</p>
-      </RouterLink>
-      <RouterLink to="/cs/riwayat?status=APPROVED" class="card hover:border-green-300">
-        <p class="text-sm text-slate-500">Selesai</p>
-        <p class="text-2xl font-bold text-green-700">{{ loading ? '...' : stats.approved }}</p>
-      </RouterLink>
-    </div>
-
-    <div class="grid gap-2 sm:grid-cols-2">
-      <RouterLink to="/cs/draft" class="btn-secondary text-center">Daftar Draft</RouterLink>
-      <RouterLink to="/cs/riwayat" class="btn-secondary text-center">Riwayat Laporan</RouterLink>
-      <RouterLink to="/cs/perbaikan" class="btn-secondary text-center">Perlu Perbaikan</RouterLink>
-      <RouterLink to="/cs/notifikasi" class="btn-secondary text-center">Notifikasi</RouterLink>
-    </div>
-
-    <section v-if="localDrafts.length" class="space-y-2">
-      <h2 class="font-semibold">Draft Terbaru</h2>
+    <!-- Ringkasan -->
+    <section
+      class="grid overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm sm:grid-cols-2 lg:grid-cols-4"
+    >
       <RouterLink
-        v-for="draft in localDrafts.slice(0, 3)"
-        :key="draft.id"
-        :to="`/cs/draft/${draft.id}`"
-        class="card block hover:border-primary-300"
+        to="/cs/draft"
+        class="border-b border-[#eee7d8] px-5 py-4 transition hover:bg-[#fdfbf6] sm:border-r lg:border-b-0"
       >
-        <div class="flex items-center justify-between">
-          <span>{{ draft.areaName }}</span>
-          <span class="text-xs text-slate-500">{{ formatWib(draft.updatedAt) }}</span>
-        </div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Draft
+        </p>
+        <p class="mt-1 text-2xl font-bold text-[#17233d]">
+          {{ loading ? '...' : stats.drafts }}
+        </p>
+      </RouterLink>
+
+      <RouterLink
+        to="/cs/riwayat?status=SUBMITTED"
+        class="border-b border-[#eee7d8] px-5 py-4 transition hover:bg-[#fdfbf6] lg:border-b-0 lg:border-r"
+      >
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Menunggu Review
+        </p>
+        <p class="mt-1 text-2xl font-bold text-[#17233d]">
+          {{ loading ? '...' : stats.pending }}
+        </p>
+      </RouterLink>
+
+      <RouterLink
+        to="/cs/perbaikan"
+        class="border-b border-[#eee7d8] px-5 py-4 transition hover:bg-amber-50 sm:border-r lg:border-b-0"
+      >
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Perlu Perbaikan
+        </p>
+        <p class="mt-1 text-2xl font-bold text-amber-700">
+          {{ loading ? '...' : stats.revision }}
+        </p>
+      </RouterLink>
+
+      <RouterLink
+        to="/cs/riwayat?status=APPROVED"
+        class="px-5 py-4 transition hover:bg-emerald-50"
+      >
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Selesai
+        </p>
+        <p class="mt-1 text-2xl font-bold text-emerald-700">
+          {{ loading ? '...' : stats.approved }}
+        </p>
       </RouterLink>
     </section>
 
-    <section class="card">
-      <h2 class="font-semibold">Laporan Terbaru</h2>
-      <p v-if="loading" class="mt-3 text-sm text-slate-500">Memuat...</p>
-      <div v-else-if="!recentReports.length" class="mt-3 text-sm text-slate-500">Belum ada laporan.</div>
-      <div v-else class="mt-3 space-y-2">
+    <!-- Akses cepat -->
+    <section>
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="font-semibold text-[#17233d]">Akses cepat</h2>
+        <RouterLink
+          to="/cs/riwayat"
+          class="text-sm font-semibold text-[#17233d] hover:underline"
+        >
+          Lihat riwayat
+        </RouterLink>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <RouterLink
+          to="/cs/draft"
+          class="group flex items-center justify-between rounded-2xl border border-[#e4dccb] bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#17233d] hover:shadow-md"
+        >
+          <span class="font-semibold text-[#17233d]">Daftar Draft</span>
+          <span
+            class="text-lg text-[#17233d] transition group-hover:translate-x-1"
+            aria-hidden="true"
+          >
+            →
+          </span>
+        </RouterLink>
+
+        <RouterLink
+          to="/cs/riwayat"
+          class="group flex items-center justify-between rounded-2xl border border-[#e4dccb] bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#17233d] hover:shadow-md"
+        >
+          <span class="font-semibold text-[#17233d]">Riwayat Laporan</span>
+          <span
+            class="text-lg text-[#17233d] transition group-hover:translate-x-1"
+            aria-hidden="true"
+          >
+            →
+          </span>
+        </RouterLink>
+
+        <RouterLink
+          to="/cs/perbaikan"
+          class="group flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50/50 px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md"
+        >
+          <span class="font-semibold text-amber-900">Perlu Perbaikan</span>
+          <span
+            class="text-lg text-amber-800 transition group-hover:translate-x-1"
+            aria-hidden="true"
+          >
+            →
+          </span>
+        </RouterLink>
+
+        <RouterLink
+          to="/cs/notifikasi"
+          class="group flex items-center justify-between rounded-2xl border border-[#e4dccb] bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#17233d] hover:shadow-md"
+        >
+          <span class="font-semibold text-[#17233d]">Notifikasi</span>
+          <span
+            class="text-lg text-[#17233d] transition group-hover:translate-x-1"
+            aria-hidden="true"
+          >
+            →
+          </span>
+        </RouterLink>
+      </div>
+    </section>
+
+    <!-- Draft lokal -->
+    <section
+      v-if="localDrafts.length"
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+    >
+      <div
+        class="flex items-center justify-between border-b border-[#eee7d8] px-5 py-4"
+      >
+        <h2 class="font-semibold text-[#17233d]">Draft terbaru</h2>
+        <RouterLink
+          to="/cs/draft"
+          class="text-sm font-semibold text-[#17233d] hover:underline"
+        >
+          Lihat semua
+        </RouterLink>
+      </div>
+
+      <div class="divide-y divide-[#eee7d8]">
+        <RouterLink
+          v-for="draft in localDrafts.slice(0, 3)"
+          :key="draft.id"
+          :to="`/cs/draft/${draft.id}`"
+          class="group flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#fdfbf6]"
+        >
+          <span>
+            <span class="block font-semibold text-[#17233d]">
+              {{ draft.areaName }}
+            </span>
+            <span class="mt-1 block text-xs text-slate-500">
+              Terakhir disimpan {{ formatWib(draft.updatedAt) }}
+            </span>
+          </span>
+          <span
+            class="text-lg text-[#17233d] transition group-hover:translate-x-1"
+            aria-hidden="true"
+          >
+            →
+          </span>
+        </RouterLink>
+      </div>
+    </section>
+
+    <!-- Laporan terbaru -->
+    <section
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+    >
+      <div
+        class="flex items-center justify-between border-b border-[#eee7d8] px-5 py-4"
+      >
+        <h2 class="font-semibold text-[#17233d]">Laporan terbaru</h2>
+        <RouterLink
+          to="/cs/riwayat"
+          class="text-sm font-semibold text-[#17233d] hover:underline"
+        >
+          Lihat semua
+        </RouterLink>
+      </div>
+
+      <p
+        v-if="loading"
+        class="px-5 py-10 text-center text-sm text-slate-500"
+      >
+        Memuat laporan...
+      </p>
+
+      <p
+        v-else-if="!recentReports.length"
+        class="px-5 py-10 text-center text-sm text-slate-500"
+      >
+        Belum ada laporan yang dikirim.
+      </p>
+
+      <div v-else class="divide-y divide-[#eee7d8]">
         <RouterLink
           v-for="report in recentReports"
           :key="report.id"
           :to="`/cs/laporan/${report.id}`"
-          class="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50"
+          class="group flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#fdfbf6]"
         >
-          <div>
-            <p class="text-sm font-medium">{{ report.reportNumber }}</p>
-            <p class="text-xs text-slate-500">{{ report.areaName }}</p>
-          </div>
-          <StatusBadge :status="report.status" />
+          <span class="min-w-0">
+            <span class="block truncate font-semibold text-[#17233d]">
+              {{ report.reportNumber }}
+            </span>
+            <span class="mt-1 block text-sm text-slate-500">
+              {{ report.areaName }}
+            </span>
+          </span>
+
+          <span class="flex items-center gap-3">
+            <StatusBadge :status="report.status" />
+            <span
+              class="text-lg text-[#17233d] transition group-hover:translate-x-1"
+              aria-hidden="true"
+            >
+              →
+            </span>
+          </span>
         </RouterLink>
       </div>
     </section>
