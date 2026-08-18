@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from 'vue';
+import { nextTick, onBeforeUnmount, ref } from 'vue';
 import { compressToWebp } from '../lib/image';
 
 export type UploadStatus = 'idle' | 'local' | 'uploading' | 'saved' | 'failed';
@@ -40,37 +40,109 @@ function stopStream() {
 
 async function startCamera() {
   if (props.disabled || locked.value) return;
+
   stopStream();
+
   try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('Browser tidak mendukung akses kamera.');
+    }
+
     const media = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } },
+      video: {
+        facingMode: {
+          ideal: 'environment',
+        },
+      },
       audio: false,
     });
+
     stream.value = media;
     streaming.value = true;
-    if (videoRef.value) {
-      videoRef.value.srcObject = media;
-      await videoRef.value.play();
+
+    // Tunggu Vue selesai merender elemen <video>
+    await nextTick();
+
+    if (!videoRef.value) {
+      throw new Error('Elemen video tidak tersedia.');
     }
-  } catch {
-    alert('Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.');
+
+    videoRef.value.srcObject = media;
+
+    await videoRef.value.play();
+  } catch (err) {
+    console.error('Camera error:', err);
+
+    stopStream();
+
+    if (err instanceof DOMException) {
+      if (err.name === 'NotAllowedError') {
+        alert('Izin kamera ditolak. Silakan izinkan akses kamera melalui pengaturan browser.');
+        return;
+      }
+
+      if (err.name === 'NotFoundError') {
+        alert('Kamera tidak ditemukan pada perangkat ini.');
+        return;
+      }
+
+      if (err.name === 'NotReadableError') {
+        alert('Kamera sedang digunakan aplikasi lain atau tidak dapat diakses.');
+        return;
+      }
+    }
+
+    alert(err instanceof Error ? err.message : 'Tidak dapat mengakses kamera.');
   }
 }
 
 async function captureFromCamera() {
-  if (!videoRef.value) return;
+  const video = videoRef.value;
+
+  if (!video) {
+    alert('Kamera belum tersedia.');
+    return;
+  }
+
+  if (!video.videoWidth || !video.videoHeight) {
+    alert('Kamera belum siap. Tunggu sebentar lalu coba lagi.');
+    return;
+  }
+
   const canvas = document.createElement('canvas');
-  canvas.width = videoRef.value.videoWidth;
-  canvas.height = videoRef.value.videoHeight;
-  canvas.getContext('2d')?.drawImage(videoRef.value, 0, 0);
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    alert('Tidak dapat memproses foto.');
+    return;
+  }
+
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, 'image/jpeg', 0.92);
+  });
+
+  if (!blob) {
+    alert('Gagal mengambil foto.');
+    return;
+  }
+
   stopStream();
 
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-  if (!blob) return;
-
   const file = await compressToWebp(blob);
+
+  if (localPreview.value) {
+    URL.revokeObjectURL(localPreview.value);
+  }
+
   localPreview.value = URL.createObjectURL(file);
   locked.value = true;
+
   emit('capture', file, new Date().toISOString());
 }
 
@@ -130,6 +202,7 @@ onBeforeUnmount(() => {
       <video
         v-if="streaming && mode !== 'gallery'"
         ref="videoRef"
+        autoplay
         playsinline
         muted
         class="mb-3 max-h-64 w-full rounded-lg object-contain"

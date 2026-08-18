@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL COLLATE NOCASE UNIQUE,
@@ -228,5 +226,3 @@ CREATE TABLE IF NOT EXISTS app_settings (
     description TEXT,
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
-
-PRAGMA user_version = 1;

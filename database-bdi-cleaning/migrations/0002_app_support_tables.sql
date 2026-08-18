@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS login_attempts (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL COLLATE NOCASE,
@@ -25,5 +23,3 @@ CREATE TABLE IF NOT EXISTS idempotency_keys (
 
 CREATE INDEX IF NOT EXISTS idx_idempotency_expires
     ON idempotency_keys(expires_at);
-
-PRAGMA user_version = 2;
