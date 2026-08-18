@@ -19,29 +19,83 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <h1 class="text-2xl font-bold">Laporan Perlu Perbaikan</h1>
-    <p v-if="loading" class="text-sm text-slate-500">Memuat...</p>
-    <p v-else-if="!reports.length" class="text-sm text-slate-500">Tidak ada laporan yang perlu diperbaiki.</p>
-    <div v-else class="space-y-3">
-      <RouterLink
-        v-for="report in reports"
-        :key="report.id"
-        :to="`/cs/laporan/${report.id}`"
-        class="card block hover:border-amber-300"
-      >
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="font-medium">{{ report.reportNumber }}</p>
-            <p class="text-sm text-slate-600">{{ report.areaName }}</p>
-            <p v-if="report.adminNote" class="mt-2 rounded bg-amber-50 p-2 text-sm text-amber-900">
-              {{ report.adminNote }}
-            </p>
-          </div>
-          <StatusBadge :status="report.status" />
-        </div>
-      </RouterLink>
+  <div class="space-y-6">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[#a38a59]">
+        Cleaning Service
+      </p>
+      <h1 class="mt-1 text-2xl font-bold text-[#17233d]">
+        Laporan Perlu Perbaikan
+      </h1>
+      <p class="mt-2 text-sm text-slate-500">
+        Periksa catatan admin, perbaiki laporan, lalu kirim ulang.
+      </p>
     </div>
-    <RouterLink to="/cs" class="btn-secondary inline-flex">Kembali</RouterLink>
+
+    <section
+      class="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm"
+    >
+      <div class="border-b border-amber-100 bg-amber-50/60 px-5 py-4">
+        <h2 class="font-semibold text-amber-950">Menunggu perbaikan</h2>
+      </div>
+
+      <p
+        v-if="loading"
+        class="px-5 py-10 text-center text-sm text-slate-500"
+      >
+        Memuat laporan...
+      </p>
+
+      <p
+        v-else-if="!reports.length"
+        class="px-5 py-10 text-center text-sm text-slate-500"
+      >
+        Tidak ada laporan yang perlu diperbaiki.
+      </p>
+
+      <div v-else class="divide-y divide-[#f3dfb7]">
+        <RouterLink
+          v-for="report in reports"
+          :key="report.id"
+          :to="`/cs/laporan/${report.id}`"
+          class="group flex items-start justify-between gap-4 px-5 py-4 transition hover:bg-amber-50/50"
+        >
+          <span class="min-w-0">
+            <span class="block font-semibold text-[#17233d]">
+              {{ report.reportNumber }}
+            </span>
+            <span class="mt-1 block text-sm text-slate-600">
+              {{ report.areaName }}
+            </span>
+
+            <span
+              v-if="report.adminNote"
+              class="mt-3 block rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-5 text-amber-950"
+            >
+              <span class="font-semibold">Catatan admin:</span>
+              {{ report.adminNote }}
+            </span>
+          </span>
+
+          <span class="flex shrink-0 items-center gap-3">
+            <StatusBadge :status="report.status" />
+            <span
+              class="text-lg text-amber-900 transition group-hover:translate-x-1"
+              aria-hidden="true"
+            >
+              →
+            </span>
+          </span>
+        </RouterLink>
+      </div>
+    </section>
+
+    <RouterLink
+      to="/cs"
+      class="inline-flex items-center gap-2 rounded-xl border border-[#cbd5e1] bg-white px-4 py-2.5 text-sm font-semibold text-[#17233d] transition hover:border-[#17233d] hover:bg-[#fdfbf6]"
+    >
+      <span aria-hidden="true">←</span>
+      Kembali ke Dashboard
+    </RouterLink>
   </div>
 </template>
