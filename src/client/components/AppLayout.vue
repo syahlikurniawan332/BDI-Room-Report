@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { RouterLink, useRoute } from 'vue-router';
+import { RouterLink } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell.vue';
 import { computed } from 'vue';
 
 const auth = useAuthStore();
-const route = useRoute();
 
-const isPublic = computed(() => !route.meta.requiresAuth && route.name !== 'login');
 const basePath = computed(() => (auth.isAdmin ? '/admin' : '/cs'));
 
 const csLinks = [
