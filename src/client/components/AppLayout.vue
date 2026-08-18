@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { RouterLink, useRouter } from 'vue-router';
+import { computed } from 'vue';
+import {
+  RouterLink,
+  useRoute,
+  useRouter,
+} from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell.vue';
-import { computed } from 'vue';
 
 const auth = useAuthStore();
+const route = useRoute();
 const router = useRouter();
 
-async function handleLogout() {
-  try {
-    await auth.logout();
-  } finally {
-    await router.replace({ name: 'login' });
-  }
-}
-
-const basePath = computed(() => (auth.isAdmin ? '/admin' : '/cs'));
+const basePath = computed(() =>
+  auth.isAdmin ? '/admin' : '/cs',
+);
 
 const csLinks = [
   { to: '/cs', label: 'Dashboard' },
@@ -31,52 +30,159 @@ const adminLinks = [
   { to: '/admin/pengaduan', label: 'Pengaduan' },
   { to: '/admin/notifikasi', label: 'Notifikasi' },
 ];
+
+function isActiveLink(path: string) {
+  if (path === '/admin' || path === '/cs') {
+    return route.path === path;
+  }
+
+  return (
+    route.path === path ||
+    route.path.startsWith(`${path}/`)
+  );
+}
+
+async function handleLogout() {
+  try {
+    await auth.logout();
+  } finally {
+    await router.replace({ name: 'login' });
+  }
+}
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <header class="border-b border-slate-200 bg-white">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <RouterLink to="/" class="text-lg font-semibold text-primary-700">
-          BDI Cleaning Control
+  <div class="min-h-screen bg-[#f8f5ed]">
+    <header
+      class="sticky top-0 z-40 border-b border-[#e7dfcf] bg-white/95 shadow-sm backdrop-blur"
+    >
+      <div
+        class="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"
+      >
+        <!-- Logo -->
+        <RouterLink
+          to="/"
+          class="flex shrink-0 items-center gap-3"
+        >
+          <span
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-[#17233d] text-xs font-bold tracking-wide text-[#fff8e8]"
+          >
+            BDI
+          </span>
+
+          <span class="hidden leading-tight sm:block">
+            <span
+              class="block font-semibold text-[#17233d]"
+            >
+              BDI Cleaning Control
+            </span>
+            <span
+              class="block text-xs text-slate-500"
+            >
+              Monitoring Kebersihan
+            </span>
+          </span>
         </RouterLink>
-        <nav class="flex items-center gap-2 text-sm">
-          <RouterLink to="/pengaduan" class="hidden text-slate-600 hover:text-primary-600 sm:inline">
-            Pengaduan
+
+        <nav
+          class="flex min-w-0 items-center justify-end gap-1.5 text-sm"
+        >
+          <!-- Pengaduan publik -->
+          <RouterLink
+            to="/pengaduan"
+            class="hidden rounded-full px-3 py-2 font-medium transition sm:inline-flex"
+            :class="
+              isActiveLink('/pengaduan')
+                ? 'bg-[#17233d] text-white shadow-sm'
+                : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
+            "
+          >
+            Pengaduan Publik
           </RouterLink>
+
           <template v-if="auth.isAuthenticated">
+            <!-- Menu CS -->
             <template v-if="auth.isCs">
               <RouterLink
                 v-for="link in csLinks"
                 :key="link.to"
                 :to="link.to"
-                class="hidden text-slate-600 hover:text-primary-600 md:inline"
+                class="hidden rounded-full px-3 py-2 font-medium transition lg:inline-flex"
+                :class="
+                  isActiveLink(link.to)
+                    ? 'bg-[#17233d] text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
+                "
               >
                 {{ link.label }}
               </RouterLink>
             </template>
+
+            <!-- Menu Admin -->
             <template v-else-if="auth.isAdmin">
               <RouterLink
                 v-for="link in adminLinks"
                 :key="link.to"
                 :to="link.to"
-                class="hidden text-slate-600 hover:text-primary-600 md:inline"
+                class="hidden rounded-full px-3 py-2 font-medium transition lg:inline-flex"
+                :class="
+                  isActiveLink(link.to)
+                    ? 'bg-[#17233d] text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
+                "
               >
                 {{ link.label }}
               </RouterLink>
             </template>
-            <RouterLink :to="basePath" class="text-slate-600 hover:text-primary-600 md:hidden">
+
+            <!-- Dashboard untuk layar kecil -->
+            <RouterLink
+              :to="basePath"
+              class="rounded-full px-3 py-2 font-medium transition lg:hidden"
+              :class="
+                isActiveLink(basePath)
+                  ? 'bg-[#17233d] text-white'
+                  : 'text-slate-600 hover:bg-[#f3ecdc]'
+              "
+            >
               Dashboard
             </RouterLink>
-            <NotificationBell />
-            <span class="hidden text-slate-500 sm:inline">{{ auth.user?.displayName }}</span>
-            <button class="btn-secondary" @click="handleLogout">Keluar</button>
+
+            <div class="ml-1 flex items-center">
+              <NotificationBell />
+            </div>
+
+            <div
+              class="ml-1 hidden rounded-full bg-[#f3ecdc] px-3 py-2 xl:block"
+            >
+              <p
+                class="max-w-44 truncate text-sm font-medium text-[#17233d]"
+              >
+                {{ auth.user?.displayName }}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="ml-1 rounded-full border border-[#17233d] bg-white px-4 py-2 font-semibold text-[#17233d] transition hover:bg-[#17233d] hover:text-white"
+              @click="handleLogout"
+            >
+              Keluar
+            </button>
           </template>
-          <RouterLink v-else to="/login" class="btn-primary">Masuk</RouterLink>
+
+          <RouterLink
+            v-else
+            to="/login"
+           class="ml-1 rounded-full bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+          >
+            Masuk
+          </RouterLink>
         </nav>
       </div>
     </header>
-    <main class="mx-auto max-w-6xl px-4 py-6">
+
+    <main class="mx-auto max-w-7xl px-4 py-7 sm:px-6">
       <slot />
     </main>
   </div>

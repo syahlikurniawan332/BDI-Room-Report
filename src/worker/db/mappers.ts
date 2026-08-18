@@ -1,4 +1,4 @@
-import type { SessionUser } from './types';
+import type { SessionUser } from '../types';
 
 export interface DbUser {
   id: string;
