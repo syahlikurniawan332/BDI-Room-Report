@@ -15,14 +15,22 @@ import { authMiddleware } from '../middleware/auth';
 
 export const api = new Hono<AppContext>();
 
-api.get('/health', (c) => c.json({ ok: true, timestamp: new Date().toISOString() }));
+api.get('/health', (c) =>
+  c.json({
+    ok: true,
+    timestamp: new Date().toISOString(),
+  }),
+);
 
+// Public routes
 api.route('/auth', authRoutes);
 api.route('/public', publicRoutes);
-api.route('/photos', photoRoutes);
 
+// Semua route setelah ini akan membaca session
 api.use('/*', authMiddleware);
 
+// Protected routes
+api.route('/photos', photoRoutes);
 api.route('/users', userRoutes);
 api.route('/areas', areaRoutes);
 api.route('/reports', reportRoutes);
@@ -34,6 +42,10 @@ api.route('/dashboard', dashboardRoutes);
 
 api.get('/me', (c) => {
   const user = c.get('user');
-  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
   return c.json({ user });
 });

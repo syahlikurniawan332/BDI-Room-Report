@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import { toRaw } from 'vue';
 
 export interface LocalDraft {
   id: string;
@@ -29,7 +30,22 @@ class DraftDatabase extends Dexie {
 export const draftDb = new DraftDatabase();
 
 export async function saveDraft(draft: LocalDraft): Promise<void> {
-  await draftDb.drafts.put(draft);
+  const rawDraft = toRaw(draft);
+
+  await draftDb.drafts.put({
+    id: rawDraft.id,
+    serverReportId: rawDraft.serverReportId,
+    areaId: rawDraft.areaId,
+    areaName: rawDraft.areaName,
+    reporterName: rawDraft.reporterName,
+    reporterEmail: rawDraft.reporterEmail,
+    beforeBlob: rawDraft.beforeBlob,
+    beforeCapturedAt: rawDraft.beforeCapturedAt,
+    afterBlob: rawDraft.afterBlob,
+    afterCapturedAt: rawDraft.afterCapturedAt,
+    createdAt: rawDraft.createdAt,
+    updatedAt: rawDraft.updatedAt,
+  });
 }
 
 export async function getDraft(id: string): Promise<LocalDraft | undefined> {
