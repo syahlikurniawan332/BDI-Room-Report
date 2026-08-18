@@ -27,6 +27,7 @@ const updateComplaintSchema = z.object({
 
 complaintRoutes.get('/', async (c) => {
   const admin = requireAdmin(c);
+
   if (!admin) {
     return c.json({ error: 'Forbidden' }, 403);
   }
@@ -62,10 +63,7 @@ complaintRoutes.get('/', async (c) => {
 
 complaintRoutes.get('/:id', async (c) => {
   const admin = requireAdmin(c);
-<<<<<<< HEAD
 
-=======
->>>>>>> fix-layout
   if (!admin) {
     return c.json({ error: 'Forbidden' }, 403);
   }
@@ -114,24 +112,16 @@ complaintRoutes.get('/:id', async (c) => {
 
 complaintRoutes.patch('/:id', async (c) => {
   const admin = requireAdmin(c);
-<<<<<<< HEAD
 
   if (!admin) {
     return c.json({ error: 'Forbidden' }, 403);
   }
 
-=======
-  if (!admin) {
-    return c.json({ error: 'Forbidden' }, 403);
-  }
-
->>>>>>> fix-layout
   const parsed = updateComplaintSchema.safeParse(
     await c.req.json(),
   );
 
   if (!parsed.success) {
-<<<<<<< HEAD
     return c.json(
       {
         error: 'Invalid payload',
@@ -139,9 +129,6 @@ complaintRoutes.patch('/:id', async (c) => {
       },
       400,
     );
-=======
-    return c.json({ error: 'Invalid payload' }, 400);
->>>>>>> fix-layout
   }
 
   const complaintId = c.req.param('id');

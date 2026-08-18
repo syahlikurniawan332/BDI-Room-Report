@@ -93,12 +93,8 @@ reportRoutes.get('/', async (c) => {
     binds.push(`%${reportNumber}%`);
   }
 
-  if (conditions.length) {
-    sql += ` WHERE ${conditions.join(' AND ')}`;
-  }
-  
+  if (conditions.length) sql += ` WHERE ${conditions.join(' AND ')}`;
   sql += ' ORDER BY r.updated_at DESC LIMIT 200';
-<<<<<<< HEAD
   const rows = await c.env.DB
   .prepare(sql)
   .bind(...binds)
@@ -110,18 +106,6 @@ return c.json({
   ),
 });
 });
-=======
-  
-  const rows = await c.env.DB
-    .prepare(sql)
-    .bind(...binds)
-    .all<DbReport & { area_name: string }>();
-  
-  return c.json({
-    reports: (rows.results ?? []).map((row) => mapReport(row)),
-  });
-  });
->>>>>>> fix-layout
 
 reportRoutes.get('/:id', async (c) => {
   const user = requireAuth(c);
