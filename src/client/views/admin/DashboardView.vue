@@ -8,6 +8,12 @@ interface CsActivity {
   id: string;
   displayName: string;
   username: string;
+
+  assignedAreas: number;
+  reportedAreasToday: number;
+  remainingAreas: number;
+  completedToday: boolean;
+
   lastSubmittedAt: string | null;
   lastStatus: string | null;
 }
@@ -19,7 +25,7 @@ const stats = ref({
   approved: 0,
   rejected: 0,
   newComplaints: 0,
-  notReportedToday: 0,
+  incompleteCsToday: 0,
 });
 const csActivity = ref<CsActivity[]>([]);
 const loading = ref(true);
@@ -127,10 +133,11 @@ onMounted(async () => {
         <p
           class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
         >
-          Belum Melapor
+          CS Belum Selesai
         </p>
+
         <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
-          {{ loading ? '...' : stats.notReportedToday }}
+          {{ loading ? '...' : stats.incompleteCsToday }}
         </p>
       </div>
     </section>
@@ -223,6 +230,7 @@ onMounted(async () => {
           <thead class="bg-slate-50 dark:bg-slate-950">
             <tr class="text-left text-slate-500 dark:text-slate-400">
               <th class="px-5 py-3">Nama</th>
+              <th class="px-5 py-3">Progres Hari Ini</th>
               <th class="px-5 py-3">Laporan Terakhir</th>
               <th class="px-5 py-3">Status Terakhir</th>
             </tr>
@@ -236,6 +244,60 @@ onMounted(async () => {
             >
               <td class="px-5 py-4 font-medium text-slate-900 dark:text-slate-100">
                 {{ cs.displayName }}
+              </td>
+
+              <td class="px-5 py-4">
+                <!-- Belum punya assignment -->
+                <div
+                  v-if="cs.assignedAreas === 0"
+                  class="text-sm text-slate-500 dark:text-slate-400"
+                >
+                  Belum ada area tugas
+                </div>
+
+                <!-- Sudah punya assignment -->
+                <div v-else class="min-w-[180px]">
+                  <div class="flex items-center justify-between gap-3 text-sm">
+                    <span
+                      class="font-semibold"
+                      :class="
+                        cs.completedToday
+                          ? 'text-emerald-700 dark:text-emerald-400'
+                          : 'text-slate-700 dark:text-slate-300'
+                      "
+                    >
+                      {{ cs.reportedAreasToday }} / {{ cs.assignedAreas }} area
+                    </span>
+
+                    <span
+                      v-if="cs.completedToday"
+                      class="text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                    >
+                      Selesai
+                    </span>
+                  </div>
+
+                  <div
+                    class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                  >
+                    <div
+                      class="h-full rounded-full bg-emerald-500 transition-all"
+                      :style="{
+                        width: `${Math.min(
+                          (cs.reportedAreasToday / cs.assignedAreas) * 100,
+                          100,
+                        )}%`,
+                      }"
+                    />
+                  </div>
+
+                  <p
+                    v-if="!cs.completedToday"
+                    class="mt-1.5 text-xs text-slate-500 dark:text-slate-400"
+                  >
+                    {{ cs.remainingAreas }} area belum selesai
+                  </p>
+                </div>
               </td>
 
               <td class="px-5 py-4 text-slate-600 dark:text-slate-300">
@@ -290,6 +352,54 @@ onMounted(async () => {
             {{ formatStatus(cs.lastStatus) }}
           </span>
         </div>
+        <div
+          v-if="cs.assignedAreas > 0"
+          class="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm text-slate-500 dark:text-slate-400"> Progres hari ini </span>
+
+            <span
+              class="text-sm font-semibold"
+              :class="
+                cs.completedToday
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-slate-700 dark:text-slate-300'
+              "
+            >
+              {{ cs.reportedAreasToday }} / {{ cs.assignedAreas }} area
+            </span>
+          </div>
+
+          <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+            <div
+              class="h-full rounded-full bg-emerald-500 transition-all"
+              :style="{
+                width: `${Math.min((cs.reportedAreasToday / cs.assignedAreas) * 100, 100)}%`,
+              }"
+            />
+          </div>
+
+          <p
+            class="mt-2 text-xs"
+            :class="
+              cs.completedToday
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-slate-500 dark:text-slate-400'
+            "
+          >
+            {{
+              cs.completedToday ? 'Semua area selesai' : `${cs.remainingAreas} area belum selesai`
+            }}
+          </p>
+        </div>
+
+        <div
+          v-else
+          class="mt-4 border-t border-slate-100 pt-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400"
+        >
+          Belum ada area yang ditugaskan.
+        </div>
       </article>
     </section>
 
@@ -300,7 +410,7 @@ onMounted(async () => {
         <p class="text-sm text-slate-500 dark:text-slate-400">Kelola data pendukung sistem.</p>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-3">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <RouterLink
           to="/admin/pengguna"
           class="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-[#17233d] hover:shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -316,6 +426,17 @@ onMounted(async () => {
           <p class="font-semibold text-slate-900 dark:text-slate-100">Area</p>
           <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Kelola daftar area kebersihan.
+          </p>
+        </RouterLink>
+
+        <RouterLink
+          to="/admin/penugasan-area"
+          class="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-[#17233d] hover:shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        >
+          <p class="font-semibold text-slate-900 dark:text-slate-100">Penugasan Area</p>
+
+          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Atur pembagian area untuk setiap Cleaning Service.
           </p>
         </RouterLink>
 

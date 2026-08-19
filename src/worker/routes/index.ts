@@ -3,6 +3,7 @@ import type { AppContext } from '../types';
 import { authRoutes } from './auth';
 import { userRoutes } from './users';
 import { areaRoutes } from './areas';
+import { areaAssignmentRoutes } from './area-assignments';
 import { reportRoutes } from './reports';
 import { complaintRoutes } from './complaints';
 import { holidayRoutes } from './holidays';
@@ -33,6 +34,10 @@ api.use('/*', authMiddleware);
 api.route('/photos', photoRoutes);
 api.route('/users', userRoutes);
 api.route('/areas', areaRoutes);
+api.route(
+  '/area-assignments',
+  areaAssignmentRoutes,
+);
 api.route('/reports', reportRoutes);
 api.route('/complaints', complaintRoutes);
 api.route('/holidays', holidayRoutes);

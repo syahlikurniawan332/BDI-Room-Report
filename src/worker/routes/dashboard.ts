@@ -70,6 +70,25 @@ dashboardRoutes.get('/admin', async (c) => {
      u.username,
 
      (
+       SELECT COUNT(DISTINCT aa.area_id)
+       FROM area_assignments aa
+       WHERE aa.user_id = u.id
+         AND aa.is_active = 1
+     ) AS assigned_areas,
+
+     (
+       SELECT COUNT(DISTINCT r.area_id)
+       FROM reports r
+       INNER JOIN area_assignments aa
+         ON aa.area_id = r.area_id
+        AND aa.user_id = u.id
+        AND aa.is_active = 1
+       WHERE r.user_id = u.id
+         AND r.submitted_at IS NOT NULL
+         AND date(r.submitted_at, '+7 hours') = ?
+     ) AS reported_areas_today,
+
+     (
        SELECT r.submitted_at
        FROM reports r
        WHERE r.user_id = u.id
@@ -91,25 +110,46 @@ dashboardRoutes.get('/admin', async (c) => {
    WHERE u.role = 'CS'
      AND u.is_active = 1
    ORDER BY u.display_name ASC`,
-  ).all<{
-    id: string;
-    display_name: string;
-    username: string;
-    last_submitted: string | null;
-    last_status: string | null;
-  }>();
+  )
+    .bind(todayWib)
+    .all<{
+      id: string;
+      display_name: string;
+      username: string;
+      assigned_areas: number;
+      reported_areas_today: number;
+      last_submitted: string | null;
+      last_status: string | null;
+    }>();
 
-  const notReportedToday = await c.env.DB.prepare(
+  const incompleteCsToday = await c.env.DB.prepare(
     `SELECT COUNT(*) AS count
    FROM users u
    WHERE u.role = 'CS'
      AND u.is_active = 1
-     AND NOT EXISTS (
+
+     AND EXISTS (
        SELECT 1
+       FROM area_assignments aa
+       WHERE aa.user_id = u.id
+         AND aa.is_active = 1
+     )
+
+     AND (
+       SELECT COUNT(DISTINCT r.area_id)
        FROM reports r
+       INNER JOIN area_assignments aa
+         ON aa.area_id = r.area_id
+        AND aa.user_id = u.id
+        AND aa.is_active = 1
        WHERE r.user_id = u.id
          AND r.submitted_at IS NOT NULL
          AND date(r.submitted_at, '+7 hours') = ?
+     ) < (
+       SELECT COUNT(DISTINCT aa.area_id)
+       FROM area_assignments aa
+       WHERE aa.user_id = u.id
+         AND aa.is_active = 1
      )`,
   )
     .bind(todayWib)
@@ -123,14 +163,27 @@ dashboardRoutes.get('/admin', async (c) => {
       approved: counts?.approved ?? 0,
       rejected: counts?.rejected ?? 0,
       newComplaints: newComplaints?.count ?? 0,
-      notReportedToday: notReportedToday?.count ?? 0,
+      incompleteCsToday: incompleteCsToday?.count ?? 0,
     },
-    csActivity: (csActivity.results ?? []).map((row) => ({
-      id: row.id,
-      displayName: row.display_name,
-      username: row.username,
-      lastSubmittedAt: row.last_submitted,
-      lastStatus: row.last_status,
-    })),
+    csActivity: (csActivity.results ?? []).map((row) => {
+      const assignedAreas = Number(row.assigned_areas ?? 0);
+      const reportedAreasToday = Number(row.reported_areas_today ?? 0);
+
+      return {
+        id: row.id,
+        displayName: row.display_name,
+        username: row.username,
+
+        assignedAreas,
+        reportedAreasToday,
+
+        remainingAreas: Math.max(assignedAreas - reportedAreasToday, 0),
+
+        completedToday: assignedAreas > 0 && reportedAreasToday >= assignedAreas,
+
+        lastSubmittedAt: row.last_submitted,
+        lastStatus: row.last_status,
+      };
+    }),
   });
 });

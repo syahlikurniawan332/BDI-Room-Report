@@ -105,6 +105,12 @@ const router = createRouter({
         },
 
         {
+          path: 'penugasan-area',
+          name: 'admin-area-assignments',
+          component: () => import('../views/admin/AreaAssignmentsView.vue'),
+        },
+
+        {
           path: 'libur',
           name: 'admin-holidays',
           component: () => import('../views/admin/HolidaysView.vue'),

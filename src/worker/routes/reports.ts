@@ -42,9 +42,7 @@ async function loadReportWithPhotos(db: D1Database, reportId: string) {
   if (!report) return null;
 
   const photos = await db
-    .prepare(
-      `SELECT * FROM photos WHERE report_id = ? AND is_current = 1 AND deleted_at IS NULL`,
-    )
+    .prepare(`SELECT * FROM photos WHERE report_id = ? AND is_current = 1 AND deleted_at IS NULL`)
     .bind(reportId)
     .all<DbPhoto>();
 
@@ -103,9 +101,7 @@ reportRoutes.get('/', async (c) => {
 
   const whereSql = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
 
-  const countRow = await c.env.DB.prepare(
-    `SELECT COUNT(*) AS total FROM reports r${whereSql}`,
-  )
+  const countRow = await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM reports r${whereSql}`)
     .bind(...binds)
     .first<{ total: number }>();
 
@@ -137,8 +133,7 @@ reportRoutes.get('/', async (c) => {
     after_photo_id: string | null;
   };
 
-  const rows = await c.env.DB
-    .prepare(sql)
+  const rows = await c.env.DB.prepare(sql)
     .bind(...binds, pageSize, offset)
     .all<ReportListRow>();
 
@@ -169,10 +164,7 @@ reportRoutes.get('/daily-summary', async (c) => {
   const date = c.req.query('date');
 
   if (!date) {
-    return c.json(
-      { error: 'Parameter date wajib diisi.' },
-      400,
-    );
+    return c.json({ error: 'Parameter date wajib diisi.' }, 400);
   }
 
   const rows = await c.env.DB.prepare(
@@ -248,23 +240,15 @@ reportRoutes.get('/daily-summary', async (c) => {
   const summary = {
     total: reports.length,
 
-    approved: reports.filter(
-      (report) => report.status === 'APPROVED',
-    ).length,
+    approved: reports.filter((report) => report.status === 'APPROVED').length,
 
-    revision: reports.filter(
-      (report) => report.status === 'REVISION_REQUIRED',
-    ).length,
+    revision: reports.filter((report) => report.status === 'REVISION_REQUIRED').length,
 
     pending: reports.filter(
-      (report) =>
-        report.status === 'SUBMITTED' ||
-        report.status === 'RESUBMITTED',
+      (report) => report.status === 'SUBMITTED' || report.status === 'RESUBMITTED',
     ).length,
 
-    rejected: reports.filter(
-      (report) => report.status === 'REJECTED',
-    ).length,
+    rejected: reports.filter((report) => report.status === 'REJECTED').length,
   };
 
   return c.json({
@@ -281,10 +265,7 @@ reportRoutes.get('/daily-summary', async (c) => {
       beforePhotoId: report.before_photo_id,
       afterPhotoId: report.after_photo_id,
 
-      latestReviewNote:
-        report.latest_review_note ??
-        report.admin_note ??
-        null,
+      latestReviewNote: report.latest_review_note ?? report.admin_note ?? null,
     })),
   });
 });
@@ -400,6 +381,26 @@ reportRoutes.post('/', async (c) => {
     .first();
   if (!area) return c.json({ error: 'Area tidak ditemukan atau tidak aktif.' }, 404);
 
+  const assignment = await c.env.DB.prepare(
+    `SELECT id
+   FROM area_assignments
+   WHERE user_id = ?
+     AND area_id = ?
+     AND is_active = 1
+   LIMIT 1`,
+  )
+    .bind(cs.id, parsed.data.areaId)
+    .first<{ id: string }>();
+
+  if (!assignment) {
+    return c.json(
+      {
+        error: 'Area ini tidak termasuk dalam penugasan aktif Anda.',
+      },
+      403,
+    );
+  }
+
   const dbUser = await c.env.DB.prepare('SELECT display_name, email FROM users WHERE id = ?')
     .bind(cs.id)
     .first<{ display_name: string; email: string }>();
@@ -412,7 +413,16 @@ reportRoutes.post('/', async (c) => {
     `INSERT INTO reports (id, report_number, user_id, area_id, reporter_name, reporter_email, status, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?)`,
   )
-    .bind(id, reportNumber, cs.id, parsed.data.areaId, dbUser!.display_name, dbUser!.email, now, now)
+    .bind(
+      id,
+      reportNumber,
+      cs.id,
+      parsed.data.areaId,
+      dbUser!.display_name,
+      dbUser!.email,
+      now,
+      now,
+    )
     .run();
 
   await writeAuditLog(c.env.DB, cs.id, 'CREATE_REPORT', 'report', id);
@@ -471,10 +481,9 @@ reportRoutes.post('/:id/submit', async (c) => {
     c.env.DB.prepare(
       `UPDATE reports SET status = ?, submitted_at = ?, updated_at = ? WHERE id = ?`,
     ).bind(newStatus, now, now, reportId),
-    c.env.DB.prepare(`UPDATE photos SET expires_at = ? WHERE report_id = ? AND deleted_at IS NULL`).bind(
-      expiresAt,
-      reportId,
-    ),
+    c.env.DB.prepare(
+      `UPDATE photos SET expires_at = ? WHERE report_id = ? AND deleted_at IS NULL`,
+    ).bind(expiresAt, reportId),
   ]);
 
   await writeAuditLog(c.env.DB, cs.id, 'SUBMIT_REPORT', 'report', reportId);
@@ -483,8 +492,7 @@ reportRoutes.post('/:id/submit', async (c) => {
     .bind(report.area_id)
     .first<{ name: string }>();
 
-  const notifTitle =
-    newStatus === 'RESUBMITTED' ? 'Laporan dikirim ulang' : 'Laporan baru masuk';
+  const notifTitle = newStatus === 'RESUBMITTED' ? 'Laporan dikirim ulang' : 'Laporan baru masuk';
   const notifMessage = `${report.report_number} — ${areaRow?.name ?? 'Area'} (${cs.displayName})`;
   await notifyAdmins(
     c.env.DB,

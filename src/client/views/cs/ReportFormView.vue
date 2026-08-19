@@ -19,6 +19,15 @@ const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 
+interface AssignedArea {
+  assignment_id: string;
+  assigned_from: string;
+  area_id: string;
+  area_name: string;
+  slug: string;
+  display_order: number;
+}
+
 const areas = ref<AreaPublic[]>([]);
 const report = ref<ReportPublic | null>(null);
 const localDraft = ref<LocalDraft | null>(null);
@@ -67,11 +76,13 @@ const canSubmit = computed(
 
 function syncUploadStatus() {
   if (hasBeforeOnServer.value) beforeStatus.value = 'saved';
-  else if (localDraft.value?.beforeBlob) beforeStatus.value = beforeStatus.value === 'failed' ? 'failed' : 'local';
+  else if (localDraft.value?.beforeBlob)
+    beforeStatus.value = beforeStatus.value === 'failed' ? 'failed' : 'local';
   else beforeStatus.value = 'idle';
 
   if (hasAfterOnServer.value) afterStatus.value = 'saved';
-  else if (localDraft.value?.afterBlob) afterStatus.value = afterStatus.value === 'failed' ? 'failed' : 'local';
+  else if (localDraft.value?.afterBlob)
+    afterStatus.value = afterStatus.value === 'failed' ? 'failed' : 'local';
   else afterStatus.value = 'idle';
 }
 
@@ -181,25 +192,66 @@ async function loadLocalDraftByServerId(serverReportId: string) {
 }
 
 onMounted(async () => {
-  const areaData = await apiGet<{ areas: AreaPublic[] }>('/areas');
-  areas.value = areaData.areas.filter((a) => a.isActive);
+  try {
+    /*
+     * Laporan baru:
+     * hanya mengambil area yang sedang ditugaskan
+     * kepada CS yang login.
+     */
+    if (isNew.value) {
+      const assignmentData = await apiGet<{
+        areas: AssignedArea[];
+      }>('/area-assignments/mine');
 
-  if (isLocalDraft.value) {
-    localDraft.value = (await getDraft(String(route.params.localId))) ?? null;
-    if (localDraft.value) areaId.value = localDraft.value.areaId;
-    updatePreviews();
-    syncUploadStatus();
-    return;
-  }
+      areas.value = assignmentData.areas.map((area) => ({
+        id: area.area_id,
+        name: area.area_name,
+        slug: area.slug,
+        isActive: true,
+      })) as AreaPublic[];
+    } else {
+      /*
+       * Draft / laporan existing tetap menggunakan master area.
+       *
+       * Tujuannya agar laporan lama masih dapat dibuka
+       * walaupun assignment area sudah di-rolling.
+       */
+      const areaData = await apiGet<{
+        areas: AreaPublic[];
+      }>('/areas');
 
-  if (!isNew.value) {
-    const data = await apiGet<{ report: ReportPublic }>(`/reports/${route.params.id}`);
-    report.value = data.report;
-    areaId.value = data.report.areaId;
-    await loadLocalDraftByServerId(data.report.id);
-    updatePreviews();
-    syncUploadStatus();
-    await resumePendingUploads();
+      areas.value = areaData.areas;
+    }
+
+    if (isLocalDraft.value) {
+      localDraft.value = (await getDraft(String(route.params.localId))) ?? null;
+
+      if (localDraft.value) {
+        areaId.value = localDraft.value.areaId;
+      }
+
+      updatePreviews();
+      syncUploadStatus();
+      return;
+    }
+
+    if (!isNew.value) {
+      const data = await apiGet<{
+        report: ReportPublic;
+      }>(`/reports/${route.params.id}`);
+
+      report.value = data.report;
+      areaId.value = data.report.areaId;
+
+      await loadLocalDraftByServerId(data.report.id);
+
+      updatePreviews();
+      syncUploadStatus();
+
+      await resumePendingUploads();
+    }
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Gagal memuat data laporan.';
   }
 });
 
@@ -286,16 +338,23 @@ async function submitReport() {
 
         <div>
           <label class="label">Area</label>
-          <select
-            v-model="areaId"
-            class="input"
-            :disabled="!canEdit || !!report?.id"
-          >
-            <option value="">Pilih area...</option>
+          <select v-model="areaId" class="input" :disabled="!canEdit || !!report?.id">
+            <option value="">Pilih area tugas...</option>
+
             <option v-for="area in areas" :key="area.id" :value="area.id">
               {{ area.name }}
             </option>
           </select>
+          <p
+            v-if="isNew && areas.length === 0"
+            class="mt-2 text-sm text-amber-600 dark:text-amber-400"
+          >
+            Belum ada area yang ditugaskan kepada Anda. Hubungi admin untuk mengatur penugasan area.
+          </p>
+
+          <p v-else-if="isNew" class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Hanya area yang menjadi tanggung jawab Anda yang ditampilkan.
+          </p>
         </div>
       </div>
     </section>
@@ -327,9 +386,7 @@ async function submitReport() {
         </div>
 
         <div class="rounded-xl border border-[#e4dccb] dark:border-slate-700 bg-[#fdfbf6] p-4">
-          <p class="mb-3 text-sm font-semibold text-[#17233d] dark:text-slate-100">
-            2. Foto After
-          </p>
+          <p class="mb-3 text-sm font-semibold text-[#17233d] dark:text-slate-100">2. Foto After</p>
           <PhotoCapture
             label="Foto After"
             mode="camera"
