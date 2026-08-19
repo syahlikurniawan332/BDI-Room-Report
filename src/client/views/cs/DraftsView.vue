@@ -31,8 +31,8 @@ onMounted(async () => {
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[#a38a59]">
           Cleaning Service
         </p>
-        <h1 class="mt-1 text-2xl font-bold text-[#17233d]">Daftar Draft</h1>
-        <p class="mt-2 text-sm text-slate-500">
+        <h1 class="mt-1 text-2xl font-bold text-[#17233d] dark:text-slate-100">Daftar Draft</h1>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
           Lanjutkan laporan yang belum dikirim.
         </p>
       </div>
@@ -48,27 +48,27 @@ onMounted(async () => {
 
     <section
       v-if="localDrafts.length"
-      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
     >
-      <div class="border-b border-[#eee7d8] px-5 py-4">
-        <h2 class="font-semibold text-[#17233d]">Draft di perangkat ini</h2>
-        <p class="mt-1 text-sm text-slate-500">
+      <div class="border-b border-[#eee7d8] dark:border-slate-800 px-5 py-4">
+        <h2 class="font-semibold text-[#17233d] dark:text-slate-100">Draft di perangkat ini</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Draft ini tersimpan di perangkat dan belum sepenuhnya dikirim ke server.
         </p>
       </div>
 
-      <div class="divide-y divide-[#eee7d8]">
+      <div class="divide-y divide-[#eee7d8] dark:divide-slate-800">
         <RouterLink
           v-for="draft in localDrafts"
           :key="draft.id"
           :to="`/cs/draft/${draft.id}`"
-          class="group flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#fdfbf6]"
+          class="group flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#fdfbf6] dark:hover:bg-slate-800"
         >
           <span class="min-w-0">
-            <span class="block font-semibold text-[#17233d]">
+            <span class="block font-semibold text-[#17233d] dark:text-slate-100">
               {{ draft.areaName }}
             </span>
-            <span class="mt-1 block text-sm text-slate-500">
+            <span class="mt-1 block text-sm text-slate-500 dark:text-slate-400">
               Before: {{ draft.beforeBlob ? 'tersimpan' : 'belum ada' }}
               <span class="mx-1 text-slate-300">•</span>
               After: {{ draft.afterBlob ? 'tersimpan' : 'belum ada' }}
@@ -79,7 +79,7 @@ onMounted(async () => {
           </span>
 
           <span
-            class="shrink-0 text-lg text-[#17233d] transition group-hover:translate-x-1"
+            class="shrink-0 text-lg text-[#17233d] dark:text-slate-100 transition group-hover:translate-x-1"
             aria-hidden="true"
           >
             →
@@ -89,41 +89,41 @@ onMounted(async () => {
     </section>
 
     <section
-      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
     >
-      <div class="border-b border-[#eee7d8] px-5 py-4">
-        <h2 class="font-semibold text-[#17233d]">Draft di server</h2>
-        <p class="mt-1 text-sm text-slate-500">
+      <div class="border-b border-[#eee7d8] dark:border-slate-800 px-5 py-4">
+        <h2 class="font-semibold text-[#17233d] dark:text-slate-100">Draft di server</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Laporan yang sudah dibuat tetapi belum dikirim.
         </p>
       </div>
 
       <p
         v-if="loading"
-        class="px-5 py-10 text-center text-sm text-slate-500"
+        class="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
       >
         Memuat draft...
       </p>
 
       <p
         v-else-if="!serverDrafts.length"
-        class="px-5 py-10 text-center text-sm text-slate-500"
+        class="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
       >
         Tidak ada draft di server.
       </p>
 
-      <div v-else class="divide-y divide-[#eee7d8]">
+      <div v-else class="divide-y divide-[#eee7d8] dark:divide-slate-800">
         <RouterLink
           v-for="draft in serverDrafts"
           :key="draft.id"
           :to="`/cs/laporan/${draft.id}`"
-          class="group flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#fdfbf6]"
+          class="group flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#fdfbf6] dark:hover:bg-slate-800"
         >
           <span class="min-w-0">
-            <span class="block font-semibold text-[#17233d]">
+            <span class="block font-semibold text-[#17233d] dark:text-slate-100">
               {{ draft.areaName ?? draft.areaId }}
             </span>
-            <span class="mt-1 block text-sm text-slate-500">
+            <span class="mt-1 block text-sm text-slate-500 dark:text-slate-400">
               {{ draft.reportNumber }}
             </span>
             <span class="mt-1 block text-xs text-slate-400">
@@ -132,7 +132,7 @@ onMounted(async () => {
           </span>
 
           <span
-            class="shrink-0 text-lg text-[#17233d] transition group-hover:translate-x-1"
+            class="shrink-0 text-lg text-[#17233d] dark:text-slate-100 transition group-hover:translate-x-1"
             aria-hidden="true"
           >
             →
@@ -143,7 +143,7 @@ onMounted(async () => {
 
     <RouterLink
       to="/cs"
-      class="inline-flex items-center gap-2 rounded-xl border border-[#cbd5e1] bg-white px-4 py-2.5 text-sm font-semibold text-[#17233d] transition hover:border-[#17233d] hover:bg-[#fdfbf6]"
+      class="inline-flex items-center gap-2 rounded-xl border border-[#cbd5e1] bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-[#17233d] dark:text-slate-100 transition hover:border-[#17233d] hover:bg-[#fdfbf6] dark:hover:bg-slate-800"
     >
       <span aria-hidden="true">←</span>
       Kembali ke Dashboard

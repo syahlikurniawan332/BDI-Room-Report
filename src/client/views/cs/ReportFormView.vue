@@ -254,11 +254,11 @@ async function submitReport() {
     </div>
 
     <section
-      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
     >
-      <div class="border-b border-[#eee7d8] px-6 py-5">
-        <h2 class="font-semibold text-[#17233d]">Informasi laporan</h2>
-        <p class="mt-1 text-sm text-slate-500">
+      <div class="border-b border-[#eee7d8] dark:border-slate-800 px-6 py-5">
+        <h2 class="font-semibold text-[#17233d] dark:text-slate-100">Informasi laporan</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Pastikan area yang dipilih sudah sesuai sebelum mengambil foto.
         </p>
       </div>
@@ -268,7 +268,7 @@ async function submitReport() {
           <div>
             <label class="label">Nama Pegawai CS</label>
             <input
-              class="input bg-[#fdfbf6] text-slate-600"
+              class="input bg-[#fdfbf6] text-slate-600 dark:text-slate-300"
               :value="auth.user?.displayName"
               readonly
             />
@@ -277,7 +277,7 @@ async function submitReport() {
           <div>
             <label class="label">Email CS</label>
             <input
-              class="input bg-[#fdfbf6] text-slate-600"
+              class="input bg-[#fdfbf6] text-slate-600 dark:text-slate-300"
               :value="auth.user?.email"
               readonly
             />
@@ -301,18 +301,18 @@ async function submitReport() {
     </section>
 
     <section
-      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
     >
-      <div class="border-b border-[#eee7d8] px-6 py-5">
-        <h2 class="font-semibold text-[#17233d]">Dokumentasi kebersihan</h2>
-        <p class="mt-1 text-sm text-slate-500">
+      <div class="border-b border-[#eee7d8] dark:border-slate-800 px-6 py-5">
+        <h2 class="font-semibold text-[#17233d] dark:text-slate-100">Dokumentasi kebersihan</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Ambil foto kondisi sebelum dan setelah pembersihan.
         </p>
       </div>
 
       <div class="grid gap-5 p-6 md:grid-cols-2">
-        <div class="rounded-xl border border-[#e4dccb] bg-[#fdfbf6] p-4">
-          <p class="mb-3 text-sm font-semibold text-[#17233d]">
+        <div class="rounded-xl border border-[#e4dccb] dark:border-slate-700 bg-[#fdfbf6] p-4">
+          <p class="mb-3 text-sm font-semibold text-[#17233d] dark:text-slate-100">
             1. Foto Before
           </p>
           <PhotoCapture
@@ -326,8 +326,8 @@ async function submitReport() {
           />
         </div>
 
-        <div class="rounded-xl border border-[#e4dccb] bg-[#fdfbf6] p-4">
-          <p class="mb-3 text-sm font-semibold text-[#17233d]">
+        <div class="rounded-xl border border-[#e4dccb] dark:border-slate-700 bg-[#fdfbf6] p-4">
+          <p class="mb-3 text-sm font-semibold text-[#17233d] dark:text-slate-100">
             2. Foto After
           </p>
           <PhotoCapture
@@ -345,7 +345,7 @@ async function submitReport() {
 
     <p
       v-if="report?.adminNote"
-      class="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-950"
+      class="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-5 py-4 text-sm leading-6 text-amber-950"
     >
       <span class="font-semibold">Catatan admin:</span>
       {{ report.adminNote }}
@@ -360,17 +360,17 @@ async function submitReport() {
 
     <p
       v-if="error"
-      class="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700"
+      class="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/30 px-5 py-4 text-sm text-red-700 dark:text-red-300"
     >
       {{ error }}
     </p>
 
     <div
-      class="flex flex-col-reverse gap-3 border-t border-[#e4dccb] pt-6 sm:flex-row sm:justify-between"
+      class="flex flex-col-reverse gap-3 border-t border-[#e4dccb] dark:border-slate-700 pt-6 sm:flex-row sm:justify-between"
     >
       <RouterLink
         to="/cs"
-        class="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#cbd5e1] bg-white px-5 text-sm font-semibold text-[#17233d] transition hover:border-[#17233d] hover:bg-[#fdfbf6]"
+        class="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#cbd5e1] bg-white dark:bg-slate-900 px-5 text-sm font-semibold text-[#17233d] dark:text-slate-100 transition hover:border-[#17233d] hover:bg-[#fdfbf6] dark:hover:bg-slate-800"
       >
         Kembali
       </RouterLink>

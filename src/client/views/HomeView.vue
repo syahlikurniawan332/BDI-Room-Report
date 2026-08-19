@@ -7,13 +7,27 @@ const auth = useAuthStore();
 
 <template>
   <div class="space-y-8">
-    <section class="card">
-      <h1 class="text-2xl font-bold text-slate-900">BDI Medan Cleaning Control</h1>
-      <p class="mt-2 text-slate-600">
+    <!-- Hero -->
+    <section
+      class="card border border-slate-200 bg-white text-slate-900 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+    >
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
+        BDI Medan Cleaning Control
+      </h1>
+
+      <p class="mt-2 text-slate-600 dark:text-slate-300">
         Sistem pelaporan kondisi kebersihan area Balai Diklat Industri Medan.
       </p>
+
       <div class="mt-6 flex flex-wrap gap-3">
-        <RouterLink v-if="!auth.isAuthenticated" to="/login" class="btn-primary">Masuk Staff</RouterLink>
+        <RouterLink
+          v-if="!auth.isAuthenticated"
+          to="/login"
+          class="btn-primary"
+        >
+          Masuk Staff
+        </RouterLink>
+
         <RouterLink
           v-else
           :to="auth.isAdmin ? '/admin' : '/cs'"
@@ -21,22 +35,52 @@ const auth = useAuthStore();
         >
           Buka Dashboard
         </RouterLink>
-        <RouterLink to="/pengaduan" class="btn-secondary">Kirim Pengaduan</RouterLink>
+
+        <RouterLink
+          to="/pengaduan"
+          class="btn-secondary"
+        >
+          Kirim Pengaduan
+        </RouterLink>
       </div>
     </section>
 
+    <!-- Role Cards -->
     <section class="grid gap-4 md:grid-cols-3">
-      <div class="card">
-        <h2 class="font-semibold">Cleaning Service</h2>
-        <p class="mt-2 text-sm text-slate-600">Ambil foto before/after, simpan draft, kirim laporan.</p>
+      <div
+        class="card border border-slate-200 bg-white transition-colors dark:border-slate-800 dark:bg-slate-900"
+      >
+        <h2 class="font-semibold text-slate-900 dark:text-slate-100">
+          Cleaning Service
+        </h2>
+
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          Ambil foto before/after, simpan draft, kirim laporan.
+        </p>
       </div>
-      <div class="card">
-        <h2 class="font-semibold">Admin</h2>
-        <p class="mt-2 text-sm text-slate-600">Review laporan, kelola area, pengguna, dan pengaduan.</p>
+
+      <div
+        class="card border border-slate-200 bg-white transition-colors dark:border-slate-800 dark:bg-slate-900"
+      >
+        <h2 class="font-semibold text-slate-900 dark:text-slate-100">
+          Admin
+        </h2>
+
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          Review laporan, kelola area, pengguna, dan pengaduan.
+        </p>
       </div>
-      <div class="card">
-        <h2 class="font-semibold">Masyarakat</h2>
-        <p class="mt-2 text-sm text-slate-600">Kirim pengaduan anonim dengan foto opsional.</p>
+
+      <div
+        class="card border border-slate-200 bg-white transition-colors dark:border-slate-800 dark:bg-slate-900"
+      >
+        <h2 class="font-semibold text-slate-900 dark:text-slate-100">
+          Masyarakat
+        </h2>
+
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          Kirim pengaduan anonim dengan foto opsional.
+        </p>
       </div>
     </section>
   </div>

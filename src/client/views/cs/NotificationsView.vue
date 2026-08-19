@@ -24,14 +24,14 @@ function entityLink(type: string | null, id: string | null) {
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[#a38a59]">
           Cleaning Service
         </p>
-        <h1 class="mt-1 text-2xl font-bold text-[#17233d]">
+        <h1 class="mt-1 text-2xl font-bold text-[#17233d] dark:text-slate-100">
           Notifikasi
         </h1>
       </div>
 
       <button
         type="button"
-        class="rounded-xl border border-[#cbd5e1] bg-white px-4 py-2.5 text-sm font-semibold text-[#17233d] shadow-sm transition hover:border-[#17233d] hover:bg-[#fdfbf6] disabled:cursor-not-allowed disabled:opacity-60"
+        class="rounded-xl border border-[#cbd5e1] bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-[#17233d] dark:text-slate-100 shadow-sm transition hover:border-[#17233d] hover:bg-[#fdfbf6] dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         :disabled="!items.length"
         @click="store.markRead(undefined, true)"
       >
@@ -40,27 +40,27 @@ function entityLink(type: string | null, id: string | null) {
     </div>
 
     <section
-      class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm"
+      class="overflow-hidden rounded-2xl border border-[#e4dccb] dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
     >
-      <div class="border-b border-[#eee7d8] px-5 py-4">
-        <h2 class="font-semibold text-[#17233d]">Pembaruan terbaru</h2>
+      <div class="border-b border-[#eee7d8] dark:border-slate-800 px-5 py-4">
+        <h2 class="font-semibold text-[#17233d] dark:text-slate-100">Pembaruan terbaru</h2>
       </div>
 
       <p
         v-if="loading"
-        class="px-5 py-10 text-center text-sm text-slate-500"
+        class="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
       >
         Memuat notifikasi...
       </p>
 
       <p
         v-else-if="!items.length"
-        class="px-5 py-10 text-center text-sm text-slate-500"
+        class="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
       >
         Tidak ada notifikasi.
       </p>
 
-      <div v-else class="divide-y divide-[#eee7d8]">
+      <div v-else class="divide-y divide-[#eee7d8] dark:divide-slate-800">
         <component
           :is="entityLink(item.relatedEntityType, item.relatedEntityId) ? RouterLink : 'div'"
           v-for="item in items"
@@ -68,9 +68,9 @@ function entityLink(type: string | null, id: string | null) {
           :to="entityLink(item.relatedEntityType, item.relatedEntityId) ?? undefined"
           class="group flex items-start gap-4 px-5 py-4 transition"
           :class="[
-            !item.readAt ? 'bg-[#fffaf0]' : 'bg-white',
+            !item.readAt ? 'bg-[#fffaf0]' : 'bg-white dark:bg-slate-900',
             entityLink(item.relatedEntityType, item.relatedEntityId)
-              ? 'cursor-pointer hover:bg-[#fdfbf6]'
+              ? 'cursor-pointer hover:bg-[#fdfbf6] dark:hover:bg-slate-800'
               : '',
           ]"
           @click="!item.readAt && store.markRead([item.id])"
@@ -82,7 +82,7 @@ function entityLink(type: string | null, id: string | null) {
 
           <span class="min-w-0 flex-1">
             <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span class="font-semibold text-[#17233d]">
+              <span class="font-semibold text-[#17233d] dark:text-slate-100">
                 {{ item.title }}
               </span>
               <span class="text-xs text-slate-400">
@@ -90,14 +90,14 @@ function entityLink(type: string | null, id: string | null) {
               </span>
             </span>
 
-            <span class="mt-1 block text-sm leading-6 text-slate-600">
+            <span class="mt-1 block text-sm leading-6 text-slate-600 dark:text-slate-300">
               {{ item.message }}
             </span>
           </span>
 
           <span
             v-if="entityLink(item.relatedEntityType, item.relatedEntityId)"
-            class="mt-1 text-lg text-[#17233d] transition group-hover:translate-x-1"
+            class="mt-1 text-lg text-[#17233d] dark:text-slate-100 transition group-hover:translate-x-1"
             aria-hidden="true"
           >
             →
@@ -108,7 +108,7 @@ function entityLink(type: string | null, id: string | null) {
 
     <RouterLink
       to="/cs"
-      class="inline-flex items-center gap-2 rounded-xl border border-[#cbd5e1] bg-white px-4 py-2.5 text-sm font-semibold text-[#17233d] transition hover:border-[#17233d] hover:bg-[#fdfbf6]"
+      class="inline-flex items-center gap-2 rounded-xl border border-[#cbd5e1] bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-[#17233d] dark:text-slate-100 transition hover:border-[#17233d] hover:bg-[#fdfbf6] dark:hover:bg-slate-800"
     >
       <span aria-hidden="true">←</span>
       Kembali ke Dashboard
