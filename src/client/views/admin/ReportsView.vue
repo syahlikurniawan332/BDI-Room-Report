@@ -41,6 +41,7 @@ const page = ref(1);
 const pageSize = ref(25);
 const pagination = ref<PaginationMeta>({ page: 1, pageSize: 25, total: 0, totalPages: 1 });
 const previewReport = ref<ReportPublic | null>(null);
+const today = new Date().toISOString().slice(0, 10);
 
 const eligibleReports = computed(() =>
   reports.value.filter((report) => ['SUBMITTED', 'RESUBMITTED'].includes(report.status)),
@@ -159,111 +160,16 @@ async function downloadBulkZip() {
       : reports.value;
 
     const fullReports = await Promise.all(
-      source.slice(0, 20).map((report) =>
-        apiGet<{ report: ReportPublic }>(`/reports/${report.id}`).then((data) => data.report),
-      ),
+      source
+        .slice(0, 20)
+        .map((report) =>
+          apiGet<{ report: ReportPublic }>(`/reports/${report.id}`).then((data) => data.report),
+        ),
     );
     await downloadReportsZip(fullReports);
   } finally {
     zipLoading.value = false;
   }
-}
-
-function escapeHtml(value: string | null | undefined) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function printReport(report: ReportPublic) {
-  const popup = window.open('', '_blank', 'width=1000,height=800');
-  if (!popup) {
-    window.alert('Popup diblokir browser. Izinkan popup untuk mencetak laporan.');
-    return;
-  }
-  popup.opener = null;
-
-  const before = report.beforePhotoId ? photoUrl(report.beforePhotoId) : '';
-  const after = report.afterPhotoId ? photoUrl(report.afterPhotoId) : '';
-  const imageBlock = (label: string, url: string, capturedAt: string | null) => `
-    <div class="photo-box">
-      <h3>${label}</h3>
-      ${url ? `<img src="${url}" alt="${label}" />` : '<div class="missing">Foto tidak tersedia</div>'}
-      <p>Waktu: ${escapeHtml(formatWib(capturedAt))}</p>
-    </div>`;
-
-  popup.document.write(`<!doctype html>
-<html lang="id">
-<head>
-  <meta charset="utf-8" />
-  <title>${escapeHtml(report.reportNumber)} - Laporan Cleaning Service</title>
-  <style>
-    @page { size: A4; margin: 15mm; }
-    * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; color: #17233d; margin: 0; }
-    .header { text-align: center; border-bottom: 2px solid #17233d; padding-bottom: 12px; }
-    .header h1 { font-size: 18px; margin: 0 0 4px; }
-    .header p { margin: 0; font-size: 12px; }
-    .meta { width: 100%; margin: 18px 0; border-collapse: collapse; font-size: 12px; }
-    .meta td { padding: 5px 0; vertical-align: top; }
-    .meta td:first-child { width: 130px; font-weight: 700; }
-    .photos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
-    .photo-box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; }
-    .photo-box h3 { margin: 0 0 8px; font-size: 13px; }
-    .photo-box img { width: 100%; height: 230px; object-fit: contain; background: #f8fafc; }
-    .photo-box p { font-size: 10px; margin: 7px 0 0; color: #475569; }
-    .missing { height: 230px; display: grid; place-items: center; background: #f8fafc; color: #64748b; }
-    .note { margin-top: 18px; border-top: 1px solid #cbd5e1; padding-top: 12px; }
-    .note h3 { font-size: 13px; margin: 0 0 8px; }
-    .note p { white-space: pre-wrap; font-size: 12px; min-height: 42px; }
-    .footer { margin-top: 34px; font-size: 12px; display: flex; justify-content: flex-end; }
-    .sign { width: 220px; text-align: center; }
-    .sign-space { height: 55px; }
-    @media print { .no-print { display: none; } }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>BALAI DIKLAT INDUSTRI MEDAN</h1>
-    <p>LAPORAN KEGIATAN CLEANING SERVICE</p>
-  </div>
-
-  <table class="meta">
-    <tr><td>No. Laporan</td><td>: ${escapeHtml(report.reportNumber)}</td></tr>
-    <tr><td>Petugas CS</td><td>: ${escapeHtml(report.reporterName)}</td></tr>
-    <tr><td>Area</td><td>: ${escapeHtml(report.areaName)}</td></tr>
-    <tr><td>Tanggal Dikirim</td><td>: ${escapeHtml(formatWib(report.submittedAt))}</td></tr>
-    <tr><td>Status</td><td>: ${escapeHtml(report.status)}</td></tr>
-  </table>
-
-  <h2 style="font-size:14px;margin:0;">Dokumentasi</h2>
-  <div class="photos">
-    ${imageBlock('BEFORE', before, report.beforeCapturedAt)}
-    ${imageBlock('AFTER', after, report.afterCapturedAt)}
-  </div>
-
-  <div class="note">
-    <h3>Catatan Pengawas</h3>
-    <p>${escapeHtml(report.adminNote) || '-'}</p>
-  </div>
-
-  <div class="footer">
-    <div class="sign">
-      <p>Pengawas / Admin</p>
-      <div class="sign-space"></div>
-      <p>__________________________</p>
-    </div>
-  </div>
-
-  <script>
-    window.addEventListener('load', () => setTimeout(() => window.print(), 500));
-  <\/script>
-</body>
-</html>`);
-  popup.document.close();
 }
 
 function openPreview(report: ReportPublic) {
@@ -296,7 +202,9 @@ onMounted(async () => {
   <div class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[#a38a59] dark:text-amber-300">
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.2em] text-[#a38a59] dark:text-amber-300"
+        >
           Administrasi
         </p>
         <h1 class="mt-1 text-2xl font-bold text-[#17233d] dark:text-slate-100">Kelola Laporan</h1>
@@ -306,27 +214,49 @@ onMounted(async () => {
       </div>
 
       <div class="flex flex-wrap gap-2">
+        <RouterLink
+          :to="{
+            name: 'admin-daily-report',
+            query: { date: today },
+          }"
+          class="btn-secondary"
+        >
+          Rekap Harian
+        </RouterLink>
         <button
           type="button"
           class="btn-secondary"
           :disabled="zipLoading || !reports.length"
           @click="downloadBulkZip"
         >
-          {{ zipLoading ? 'Menyiapkan ZIP...' : selectedIds.length ? `Unduh ZIP (${selectedIds.length})` : 'Unduh ZIP Halaman' }}
+          {{
+            zipLoading
+              ? 'Menyiapkan ZIP...'
+              : selectedIds.length
+                ? `Unduh ZIP (${selectedIds.length})`
+                : 'Unduh ZIP Halaman'
+          }}
         </button>
 
         <button
           type="button"
           class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
           :disabled="approving || !eligibleReports.length"
-          @click="approveReports(eligibleReports.map((report) => report.id), `Setujui semua laporan yang tampil?`)"
+          @click="
+            approveReports(
+              eligibleReports.map((report) => report.id),
+              `Setujui semua laporan yang tampil?`,
+            )
+          "
         >
           {{ approving ? 'Memproses...' : `Setujui Semua yang Tampil (${eligibleReports.length})` }}
         </button>
       </div>
     </div>
 
-    <section class="rounded-2xl border border-[#e4dccb] bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <section
+      class="rounded-2xl border border-[#e4dccb] bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+    >
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="font-semibold text-[#17233d] dark:text-slate-100">Filter laporan</h2>
@@ -390,7 +320,12 @@ onMounted(async () => {
 
         <div>
           <label class="label">Nomor Laporan</label>
-          <input v-model="reportNumber" type="text" class="input" placeholder="Cari nomor laporan..." />
+          <input
+            v-model="reportNumber"
+            type="text"
+            class="input"
+            placeholder="Cari nomor laporan..."
+          />
         </div>
       </div>
     </section>
@@ -413,19 +348,26 @@ onMounted(async () => {
     </div>
 
     <!-- Desktop/tablet -->
-    <section class="hidden overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 md:block">
-      <div class="flex items-center justify-between border-b border-[#eee7d8] px-5 py-4 dark:border-slate-800">
+    <section
+      class="hidden overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 md:block"
+    >
+      <div
+        class="flex items-center justify-between border-b border-[#eee7d8] px-5 py-4 dark:border-slate-800"
+      >
         <div>
           <h2 class="font-semibold text-[#17233d] dark:text-slate-100">Daftar laporan</h2>
           <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {{ pagination.total }} laporan ditemukan · halaman {{ pagination.page }} dari {{ pagination.totalPages }}
+            {{ pagination.total }} laporan ditemukan · halaman {{ pagination.page }} dari
+            {{ pagination.totalPages }}
           </p>
         </div>
       </div>
 
       <div class="overflow-x-auto">
         <table class="min-w-[1050px] w-full text-sm">
-          <thead class="bg-[#fdfbf6] text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+          <thead
+            class="bg-[#fdfbf6] text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400"
+          >
             <tr>
               <th class="px-4 py-3">
                 <input
@@ -475,8 +417,12 @@ onMounted(async () => {
               </td>
 
               <td class="px-4 py-4">
-                <p class="font-semibold text-[#17233d] dark:text-slate-100">{{ report.reportNumber }}</p>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ report.reporterName }}</p>
+                <p class="font-semibold text-[#17233d] dark:text-slate-100">
+                  {{ report.reportNumber }}
+                </p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {{ report.reporterName }}
+                </p>
               </td>
 
               <td class="px-4 py-4 text-slate-700 dark:text-slate-300">{{ report.areaName }}</td>
@@ -531,13 +477,6 @@ onMounted(async () => {
                   >
                     Setujui
                   </button>
-                  <button
-                    type="button"
-                    class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                    @click="printReport(report)"
-                  >
-                    Cetak / PDF
-                  </button>
                   <RouterLink
                     :to="`/admin/laporan/${report.id}`"
                     class="rounded-lg px-3 py-2 text-xs font-semibold text-[#17233d] hover:bg-[#f3ecdc] dark:text-blue-300 dark:hover:bg-slate-800"
@@ -557,7 +496,10 @@ onMounted(async () => {
       <div v-if="loading" class="card py-10 text-center text-slate-500 dark:text-slate-400">
         Memuat laporan...
       </div>
-      <div v-else-if="!reports.length" class="card py-10 text-center text-slate-500 dark:text-slate-400">
+      <div
+        v-else-if="!reports.length"
+        class="card py-10 text-center text-slate-500 dark:text-slate-400"
+      >
         Tidak ada laporan yang sesuai dengan filter.
       </div>
 
@@ -592,7 +534,9 @@ onMounted(async () => {
             class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-left dark:border-slate-700 dark:bg-slate-800"
             @click="openPreview(report)"
           >
-            <span class="block px-2 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">Before</span>
+            <span class="block px-2 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400"
+              >Before</span
+            >
             <img
               v-if="report.beforePhotoId"
               :src="photoUrl(report.beforePhotoId)"
@@ -600,7 +544,9 @@ onMounted(async () => {
               loading="lazy"
               class="h-32 w-full object-cover"
             />
-            <span v-else class="grid h-32 place-items-center text-xs text-slate-400">Tidak ada foto</span>
+            <span v-else class="grid h-32 place-items-center text-xs text-slate-400"
+              >Tidak ada foto</span
+            >
           </button>
 
           <button
@@ -608,7 +554,9 @@ onMounted(async () => {
             class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-left dark:border-slate-700 dark:bg-slate-800"
             @click="openPreview(report)"
           >
-            <span class="block px-2 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">After</span>
+            <span class="block px-2 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400"
+              >After</span
+            >
             <img
               v-if="report.afterPhotoId"
               :src="photoUrl(report.afterPhotoId)"
@@ -616,7 +564,9 @@ onMounted(async () => {
               loading="lazy"
               class="h-32 w-full object-cover"
             />
-            <span v-else class="grid h-32 place-items-center text-xs text-slate-400">Tidak ada foto</span>
+            <span v-else class="grid h-32 place-items-center text-xs text-slate-400"
+              >Tidak ada foto</span
+            >
           </button>
         </div>
 
@@ -636,13 +586,6 @@ onMounted(async () => {
           >
             Tinjau & Catatan
           </RouterLink>
-          <button
-            type="button"
-            class="col-span-2 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
-            @click="printReport(report)"
-          >
-            Cetak / Simpan PDF
-          </button>
         </div>
       </article>
     </section>
@@ -652,7 +595,8 @@ onMounted(async () => {
       class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900"
     >
       <span class="text-slate-500 dark:text-slate-400">
-        Halaman {{ pagination.page }} dari {{ pagination.totalPages }} · {{ pagination.total }} laporan
+        Halaman {{ pagination.page }} dari {{ pagination.totalPages }} ·
+        {{ pagination.total }} laporan
       </span>
       <div class="flex gap-2">
         <button
@@ -682,10 +626,16 @@ onMounted(async () => {
       aria-modal="true"
       @click.self="closePreview"
     >
-      <div class="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
-        <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
+      <div
+        class="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+      >
+        <div
+          class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-900"
+        >
           <div>
-            <h2 class="font-semibold text-[#17233d] dark:text-slate-100">Perbandingan Before / After</h2>
+            <h2 class="font-semibold text-[#17233d] dark:text-slate-100">
+              Perbandingan Before / After
+            </h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">
               {{ previewReport.reportNumber }} · {{ previewReport.areaName }}
             </p>
@@ -701,7 +651,9 @@ onMounted(async () => {
                 v-if="previewReport.beforePhotoId"
                 type="button"
                 class="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-300"
-                @click="downloadPhoto(previewReport.beforePhotoId, previewReport.reportNumber, 'before')"
+                @click="
+                  downloadPhoto(previewReport.beforePhotoId, previewReport.reportNumber, 'before')
+                "
               >
                 Download
               </button>
@@ -712,7 +664,10 @@ onMounted(async () => {
               alt="Foto before ukuran besar"
               class="max-h-[60vh] w-full rounded-lg bg-slate-100 object-contain dark:bg-slate-950"
             />
-            <div v-else class="grid h-64 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-950">
+            <div
+              v-else
+              class="grid h-64 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-950"
+            >
               Foto tidak tersedia
             </div>
             <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
@@ -727,7 +682,9 @@ onMounted(async () => {
                 v-if="previewReport.afterPhotoId"
                 type="button"
                 class="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-300"
-                @click="downloadPhoto(previewReport.afterPhotoId, previewReport.reportNumber, 'after')"
+                @click="
+                  downloadPhoto(previewReport.afterPhotoId, previewReport.reportNumber, 'after')
+                "
               >
                 Download
               </button>
@@ -738,7 +695,10 @@ onMounted(async () => {
               alt="Foto after ukuran besar"
               class="max-h-[60vh] w-full rounded-lg bg-slate-100 object-contain dark:bg-slate-950"
             />
-            <div v-else class="grid h-64 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-950">
+            <div
+              v-else
+              class="grid h-64 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-950"
+            >
               Foto tidak tersedia
             </div>
             <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">

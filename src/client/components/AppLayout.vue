@@ -73,7 +73,7 @@ async function handleLogout() {
     class="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100"
   >
     <header
-      class="border-b border-slate-200 bg-white transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900"
+      class="print:hidden sticky top-0 z-40 border-b border-slate-200 bg-white transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900"
     >
       <div
         class="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"
@@ -93,106 +93,105 @@ async function handleLogout() {
         </RouterLink>
 
         <nav class="flex min-w-0 items-center justify-end gap-1.5 text-sm">
-        <RouterLink
-          v-if="!auth.isAuthenticated"
-          to="/pengaduan"
-          class="hidden rounded-full px-3 py-2 font-medium transition sm:inline-flex"
-          :class="
-            isActiveLink('/pengaduan')
-              ? 'bg-[#17233d] text-white shadow-sm'
-              : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
-          "
-        >
-          Pengaduan Publik
-        </RouterLink>
+          <RouterLink
+            v-if="!auth.isAuthenticated"
+            to="/pengaduan"
+            class="hidden rounded-full px-3 py-2 font-medium transition sm:inline-flex"
+            :class="
+              isActiveLink('/pengaduan')
+                ? 'bg-[#17233d] text-white shadow-sm'
+                : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
+            "
+          >
+            Pengaduan Publik
+          </RouterLink>
 
-        <template v-if="auth.isAuthenticated">
-          <template v-if="auth.isCs">
+          <template v-if="auth.isAuthenticated">
+            <template v-if="auth.isCs">
+              <RouterLink
+                v-for="link in csLinks"
+                :key="link.to"
+                :to="link.to"
+                class="hidden rounded-full px-3 py-2 font-medium transition lg:inline-flex"
+                :class="
+                  isActiveLink(link.to)
+                    ? 'bg-[#17233d] text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
+                "
+              >
+                {{ link.label }}
+              </RouterLink>
+            </template>
+
+            <template v-else-if="auth.isAdmin">
+              <RouterLink
+                v-for="link in adminLinks"
+                :key="link.to"
+                :to="link.to"
+                class="hidden rounded-full px-3 py-2 font-medium transition lg:inline-flex"
+                :class="
+                  isActiveLink(link.to)
+                    ? 'bg-[#17233d] text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
+                "
+              >
+                {{ link.label }}
+              </RouterLink>
+            </template>
+
             <RouterLink
-              v-for="link in csLinks"
-              :key="link.to"
-              :to="link.to"
-              class="hidden rounded-full px-3 py-2 font-medium transition lg:inline-flex"
+              :to="basePath"
+              class="rounded-full px-3 py-2 font-medium transition lg:hidden"
               :class="
-                isActiveLink(link.to)
-                  ? 'bg-[#17233d] text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
+                isActiveLink(basePath)
+                  ? 'bg-[#17233d] text-white'
+                  : 'text-slate-600 hover:bg-[#f3ecdc]'
               "
             >
-              {{ link.label }}
+              Dashboard
             </RouterLink>
-          </template>
 
-          <template v-else-if="auth.isAdmin">
-            <RouterLink
-              v-for="link in adminLinks"
-              :key="link.to"
-              :to="link.to"
-              class="hidden rounded-full px-3 py-2 font-medium transition lg:inline-flex"
-              :class="
-                isActiveLink(link.to)
-                  ? 'bg-[#17233d] text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
-              "
+            <div class="ml-1 flex items-center">
+              <button
+                type="button"
+                class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-lg transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                :title="theme === 'dark' ? 'Gunakan mode terang' : 'Gunakan mode gelap'"
+                @click="toggleTheme"
+              >
+                <span v-if="theme === 'dark'">☀️</span>
+                <span v-else>🌙</span>
+              </button>
+
+              <NotificationBell />
+            </div>
+
+            <div class="ml-1 hidden rounded-full bg-[#f3ecdc] px-3 py-2 xl:block">
+              <p class="max-w-44 truncate text-sm font-medium text-[#17233d]">
+                {{ auth.user?.displayName }}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="ml-1 rounded-full border border-[#17233d] bg-white px-4 py-2 font-semibold text-[#17233d] transition hover:bg-[#17233d] hover:text-white"
+              @click="handleLogout"
             >
-              {{ link.label }}
-            </RouterLink>
+              Keluar
+            </button>
           </template>
 
           <RouterLink
-            :to="basePath"
-            class="rounded-full px-3 py-2 font-medium transition lg:hidden"
-            :class="
-              isActiveLink(basePath)
-                ? 'bg-[#17233d] text-white'
-                : 'text-slate-600 hover:bg-[#f3ecdc]'
-            "
+            v-if="!auth.isAuthenticated"
+            to="/login"
+            class="ml-1 rounded-full bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-emerald-800"
           >
-            Dashboard
+            Masuk
           </RouterLink>
-
-          <div class="ml-1 flex items-center">
-            <button
-              type="button"
-              class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-lg transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-              :title="theme === 'dark' ? 'Gunakan mode terang' : 'Gunakan mode gelap'"
-              @click="toggleTheme"
-            >
-              <span v-if="theme === 'dark'">☀️</span>
-              <span v-else>🌙</span>
-            </button>
-
-            <NotificationBell />
-          </div>
-
-          <div class="ml-1 hidden rounded-full bg-[#f3ecdc] px-3 py-2 xl:block">
-            <p class="max-w-44 truncate text-sm font-medium text-[#17233d]">
-              {{ auth.user?.displayName }}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            class="ml-1 rounded-full border border-[#17233d] bg-white px-4 py-2 font-semibold text-[#17233d] transition hover:bg-[#17233d] hover:text-white"
-            @click="handleLogout"
-          >
-            Keluar
-          </button>
-        </template>
-
-  <RouterLink
-    v-if="!auth.isAuthenticated"
-    to="/login"
-    class="ml-1 rounded-full bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-emerald-800"
-  >
-    Masuk
-  </RouterLink>
-</nav>
+        </nav>
       </div>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-7 sm:px-6">
-      
+    <main class="mx-auto max-w-7xl px-4 py-7 sm:px-6 print:max-w-none print:p-0">
       <slot />
     </main>
   </div>

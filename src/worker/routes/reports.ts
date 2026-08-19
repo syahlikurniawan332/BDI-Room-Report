@@ -159,6 +159,136 @@ reportRoutes.get('/', async (c) => {
   });
 });
 
+reportRoutes.get('/daily-summary', async (c) => {
+  const admin = requireAdmin(c);
+
+  if (!admin) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
+
+  const date = c.req.query('date');
+
+  if (!date) {
+    return c.json(
+      { error: 'Parameter date wajib diisi.' },
+      400,
+    );
+  }
+
+  const rows = await c.env.DB.prepare(
+    `
+    SELECT
+      r.id,
+      r.report_number,
+      r.status,
+      r.submitted_at,
+      r.admin_note,
+
+      u.display_name AS reporter_name,
+      a.name AS area_name,
+
+      (
+        SELECT p.id
+        FROM photos p
+        WHERE p.report_id = r.id
+          AND p.photo_type = 'BEFORE'
+          AND p.is_current = 1
+          AND p.deleted_at IS NULL
+        LIMIT 1
+      ) AS before_photo_id,
+
+      (
+        SELECT p.id
+        FROM photos p
+        WHERE p.report_id = r.id
+          AND p.photo_type = 'AFTER'
+          AND p.is_current = 1
+          AND p.deleted_at IS NULL
+        LIMIT 1
+      ) AS after_photo_id,
+
+      (
+        SELECT rv.note
+        FROM reviews rv
+        WHERE rv.report_id = r.id
+        ORDER BY rv.created_at DESC
+        LIMIT 1
+      ) AS latest_review_note
+
+    FROM reports r
+
+    JOIN users u
+      ON u.id = r.user_id
+
+    JOIN areas a
+      ON a.id = r.area_id
+
+    WHERE r.submitted_at IS NOT NULL
+      AND date(r.submitted_at, '+7 hours') = ?
+
+    ORDER BY r.submitted_at ASC
+    `,
+  )
+    .bind(date)
+    .all<{
+      id: string;
+      report_number: string;
+      status: string;
+      submitted_at: string;
+      admin_note: string | null;
+      reporter_name: string;
+      area_name: string;
+      before_photo_id: string | null;
+      after_photo_id: string | null;
+      latest_review_note: string | null;
+    }>();
+
+  const reports = rows.results ?? [];
+
+  const summary = {
+    total: reports.length,
+
+    approved: reports.filter(
+      (report) => report.status === 'APPROVED',
+    ).length,
+
+    revision: reports.filter(
+      (report) => report.status === 'REVISION_REQUIRED',
+    ).length,
+
+    pending: reports.filter(
+      (report) =>
+        report.status === 'SUBMITTED' ||
+        report.status === 'RESUBMITTED',
+    ).length,
+
+    rejected: reports.filter(
+      (report) => report.status === 'REJECTED',
+    ).length,
+  };
+
+  return c.json({
+    date,
+    summary,
+
+    reports: reports.map((report) => ({
+      id: report.id,
+      reportNumber: report.report_number,
+      reporterName: report.reporter_name,
+      areaName: report.area_name,
+      status: report.status,
+      submittedAt: report.submitted_at,
+      beforePhotoId: report.before_photo_id,
+      afterPhotoId: report.after_photo_id,
+
+      latestReviewNote:
+        report.latest_review_note ??
+        report.admin_note ??
+        null,
+    })),
+  });
+});
+
 reportRoutes.post('/bulk-review', async (c) => {
   const admin = requireAdmin(c);
   if (!admin) return c.json({ error: 'Forbidden' }, 403);
