@@ -34,8 +34,6 @@ onMounted(() => {
 
 const router = useRouter();
 
-const basePath = computed(() => (auth.isAdmin ? '/admin' : '/cs'));
-
 const csLinks = [
   { to: '/cs', label: 'Dashboard' },
   { to: '/cs/laporan/baru', label: 'Buat Laporan' },
