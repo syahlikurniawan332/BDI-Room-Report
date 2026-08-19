@@ -25,6 +25,11 @@ const reviewSchema = z.object({
   note: z.string().max(2000).optional(),
 });
 
+const bulkApproveSchema = z.object({
+  reportIds: z.array(z.string().min(1)).min(1).max(50),
+  note: z.string().max(2000).optional(),
+});
+
 async function loadReportWithPhotos(db: D1Database, reportId: string) {
   const report = await db
     .prepare(
@@ -59,8 +64,11 @@ reportRoutes.get('/', async (c) => {
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
   const reportNumber = c.req.query('reportNumber');
+  const page = Math.max(1, Number(c.req.query('page') ?? '1') || 1);
+  const requestedPageSize = Number(c.req.query('pageSize') ?? '25') || 25;
+  const pageSize = Math.min(50, Math.max(10, requestedPageSize));
+  const offset = (page - 1) * pageSize;
 
-  let sql = `SELECT r.*, a.name AS area_name FROM reports r JOIN areas a ON a.id = r.area_id`;
   const conditions: string[] = [];
   const binds: unknown[] = [];
 
@@ -93,18 +101,144 @@ reportRoutes.get('/', async (c) => {
     binds.push(`%${reportNumber}%`);
   }
 
-  if (conditions.length) sql += ` WHERE ${conditions.join(' AND ')}`;
-  sql += ' ORDER BY r.updated_at DESC LIMIT 200';
-  const rows = await c.env.DB
-  .prepare(sql)
-  .bind(...binds)
-  .all<DbReport & { area_name: string }>();
+  const whereSql = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
 
-return c.json({
-  reports: (rows.results ?? []).map((row) =>
-    mapReport(row),
-  ),
+  const countRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS total FROM reports r${whereSql}`,
+  )
+    .bind(...binds)
+    .first<{ total: number }>();
+
+  const sql = `
+    SELECT
+      r.*,
+      a.name AS area_name,
+      pb.id AS before_photo_id,
+      pa.id AS after_photo_id
+    FROM reports r
+    JOIN areas a ON a.id = r.area_id
+    LEFT JOIN photos pb
+      ON pb.report_id = r.id
+      AND pb.photo_type = 'BEFORE'
+      AND pb.is_current = 1
+      AND pb.deleted_at IS NULL
+    LEFT JOIN photos pa
+      ON pa.report_id = r.id
+      AND pa.photo_type = 'AFTER'
+      AND pa.is_current = 1
+      AND pa.deleted_at IS NULL
+    ${whereSql}
+    ORDER BY r.updated_at DESC
+    LIMIT ? OFFSET ?`;
+
+  type ReportListRow = DbReport & {
+    area_name: string;
+    before_photo_id: string | null;
+    after_photo_id: string | null;
+  };
+
+  const rows = await c.env.DB
+    .prepare(sql)
+    .bind(...binds, pageSize, offset)
+    .all<ReportListRow>();
+
+  const total = Number(countRow?.total ?? 0);
+
+  return c.json({
+    reports: (rows.results ?? []).map((row) => ({
+      ...mapReport(row),
+      beforePhotoId: row.before_photo_id,
+      afterPhotoId: row.after_photo_id,
+    })),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    },
+  });
 });
+
+reportRoutes.post('/bulk-review', async (c) => {
+  const admin = requireAdmin(c);
+  if (!admin) return c.json({ error: 'Forbidden' }, 403);
+
+  const parsed = bulkApproveSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: 'Invalid payload' }, 400);
+
+  const reportIds = [...new Set(parsed.data.reportIds)];
+  const note = parsed.data.note?.trim() || null;
+  const approved: string[] = [];
+  const skipped: Array<{ id: string; reason: string }> = [];
+
+  for (const reportId of reportIds) {
+    const report = await c.env.DB.prepare('SELECT * FROM reports WHERE id = ?')
+      .bind(reportId)
+      .first<DbReport>();
+
+    if (!report) {
+      skipped.push({ id: reportId, reason: 'Laporan tidak ditemukan.' });
+      continue;
+    }
+
+    if (!['SUBMITTED', 'RESUBMITTED'].includes(report.status)) {
+      skipped.push({
+        id: reportId,
+        reason: `Status sudah berubah menjadi ${report.status}.`,
+      });
+      continue;
+    }
+
+    const now = nowUtcIso();
+    const reviewId = generateId('rev');
+
+    const updateResult = await c.env.DB.prepare(
+      `UPDATE reports
+       SET status = 'APPROVED', admin_note = ?, approved_at = ?, updated_at = ?
+       WHERE id = ? AND status IN ('SUBMITTED', 'RESUBMITTED')`,
+    )
+      .bind(note, now, now, reportId)
+      .run();
+
+    const changed = Number(updateResult.meta?.changes ?? 0) > 0;
+    if (!changed) {
+      skipped.push({ id: reportId, reason: 'Laporan sudah diproses admin lain.' });
+      continue;
+    }
+
+    await c.env.DB.prepare(
+      `INSERT INTO reviews (id, report_id, admin_user_id, decision, note)
+       VALUES (?, ?, ?, 'APPROVED', ?)`,
+    )
+      .bind(reviewId, reportId, admin.id, note)
+      .run();
+
+    await writeAuditLog(c.env.DB, admin.id, 'BULK_APPROVE_REPORT', 'report', reportId, {
+      source: 'bulk-review',
+    });
+
+    await createNotification(
+      c.env.DB,
+      report.user_id,
+      'REPORT_APPROVED',
+      'Laporan disetujui',
+      `${report.report_number}${note ? `: ${note}` : ''}`,
+      'report',
+      reportId,
+    );
+
+    approved.push(reportId);
+  }
+
+  return c.json({
+    approved,
+    skipped,
+    summary: {
+      requested: reportIds.length,
+      approved: approved.length,
+      skipped: skipped.length,
+    },
+  });
 });
 
 reportRoutes.get('/:id', async (c) => {

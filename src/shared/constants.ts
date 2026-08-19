@@ -73,7 +73,10 @@ export interface ReportPublic {
   createdAt: string;
   updatedAt: string;
   photos?: PhotoPublic[];
+  beforePhotoId?: string | null;
+  afterPhotoId?: string | null;
 }
+
 
 export interface PhotoPublic {
   id: string;

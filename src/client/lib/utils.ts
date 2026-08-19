@@ -21,17 +21,17 @@ export const COMPLAINT_STATUS_LABELS: Record<ComplaintStatus, string> = {
 
 export function statusBadgeClass(status: string): string {
   const map: Record<string, string> = {
-    DRAFT: 'bg-slate-100 text-slate-700',
-    SUBMITTED: 'bg-blue-100 text-blue-800',
-    RESUBMITTED: 'bg-indigo-100 text-indigo-800',
-    REVISION_REQUIRED: 'bg-amber-100 text-amber-800',
-    APPROVED: 'bg-green-100 text-green-800',
-    REJECTED: 'bg-red-100 text-red-800',
-    NEW: 'bg-blue-100 text-blue-800',
-    IN_PROGRESS: 'bg-amber-100 text-amber-800',
-    RESOLVED: 'bg-green-100 text-green-800',
+    DRAFT: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+    SUBMITTED: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
+    RESUBMITTED: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
+    REVISION_REQUIRED: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+    APPROVED: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
+    REJECTED: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
+    NEW: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
+    IN_PROGRESS: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+    RESOLVED: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
   };
-  return map[status] ?? 'bg-slate-100 text-slate-700';
+  return map[status] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
 }
 
 export async function downloadReportZip(
