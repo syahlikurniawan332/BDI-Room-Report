@@ -65,13 +65,26 @@ export interface DbComplaint {
   id: string;
   complaint_number: string;
   area_id: string;
+
+  assigned_user_id: string | null;
+
   complaint_text: string;
   status: string;
   submitted_at: string;
+
+  assigned_at: string | null;
+  started_at: string | null;
+  waiting_verification_at: string | null;
+
   resolved_at: string | null;
   admin_note: string | null;
+
   created_at: string;
   updated_at: string;
+
+  // Field tambahan dari hasil JOIN
+  area_name?: string;
+  assigned_user_name?: string | null;
 }
 
 export function mapUser(row: DbUser) {
@@ -145,17 +158,28 @@ export function mapPhoto(row: DbPhoto) {
   };
 }
 
-export function mapComplaint(row: DbComplaint & { area_name?: string }) {
+export function mapComplaint(row: DbComplaint) {
   return {
     id: row.id,
     complaintNumber: row.complaint_number,
     areaId: row.area_id,
-    areaName: row.area_name,
+    areaName: row.area_name ?? null,
+
+    assignedUserId: row.assigned_user_id ?? null,
+
+    assignedUserName: row.assigned_user_name ?? null,
+
     complaintText: row.complaint_text,
     status: row.status,
     submittedAt: row.submitted_at,
-    resolvedAt: row.resolved_at,
-    adminNote: row.admin_note,
+
+    assignedAt: row.assigned_at ?? null,
+    startedAt: row.started_at ?? null,
+    waitingVerificationAt: row.waiting_verification_at ?? null,
+
+    resolvedAt: row.resolved_at ?? null,
+    adminNote: row.admin_note ?? null,
+
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -175,14 +199,7 @@ export async function writeAuditLog(
       `INSERT INTO audit_logs (id, actor_user_id, action, entity_type, entity_id, details_json)
        VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .bind(
-      id,
-      actorUserId,
-      action,
-      entityType,
-      entityId,
-      details ? JSON.stringify(details) : null,
-    )
+    .bind(id, actorUserId, action, entityType, entityId, details ? JSON.stringify(details) : null)
     .run();
 }
 

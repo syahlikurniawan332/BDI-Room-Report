@@ -13,7 +13,10 @@ import {
   validatePhotoFile,
   sha256Hex,
 } from '../lib/photos';
-import { notifyAdmins } from '../lib/notifications';
+import {
+  createNotification,
+  notifyAdmins,
+} from '../lib/notifications';
 
 export const publicRoutes = new Hono<AppContext>();
 
@@ -55,17 +58,64 @@ publicRoutes.post('/complaints', async (c) => {
   const area = await c.env.DB.prepare('SELECT id FROM areas WHERE id = ? AND is_active = 1')
     .bind(areaId)
     .first();
-  if (!area) return c.json({ error: 'Area tidak ditemukan.' }, 404);
+
+  if (!area) {
+    return c.json({ error: 'Area tidak ditemukan.' }, 404);
+  }
 
   const id = generateId('cmp');
   const complaintNumber = complaintNumberFromDate();
   const now = nowUtcIso();
 
-  await c.env.DB.prepare(
-    `INSERT INTO complaints (id, complaint_number, area_id, complaint_text, status, submitted_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'NEW', ?, ?, ?)`,
+  /*
+   * Cari CS yang saat ini bertanggung jawab
+   * atas area yang diadukan.
+   *
+   * Jika tidak ada assignment, pengaduan tetap dibuat
+   * dan assigned_user_id akan NULL.
+   */
+  const assignment = await c.env.DB.prepare(
+    `SELECT aa.user_id
+   FROM area_assignments aa
+   JOIN users u ON u.id = aa.user_id
+   WHERE aa.area_id = ?
+     AND aa.is_active = 1
+     AND u.role = 'CS'
+     AND u.is_active = 1
+   LIMIT 1`,
   )
-    .bind(id, complaintNumber, areaId, complaintText.trim(), now, now, now)
+    .bind(areaId)
+    .first<{ user_id: string }>();
+
+  const assignedUserId = assignment?.user_id ?? null;
+  const assignedAt = assignedUserId ? now : null;
+
+  await c.env.DB.prepare(
+    `INSERT INTO complaints (
+     id,
+     complaint_number,
+     area_id,
+     assigned_user_id,
+     complaint_text,
+     status,
+     submitted_at,
+     assigned_at,
+     created_at,
+     updated_at
+   )
+   VALUES (?, ?, ?, ?, ?, 'NEW', ?, ?, ?, ?)`,
+  )
+    .bind(
+      id,
+      complaintNumber,
+      areaId,
+      assignedUserId,
+      complaintText.trim(),
+      now,
+      assignedAt,
+      now,
+      now,
+    )
     .run();
 
   if (photo && photo instanceof File && photo.size > 0) {
@@ -110,6 +160,18 @@ publicRoutes.post('/complaints', async (c) => {
     'complaint',
     id,
   );
+
+  if (assignedUserId) {
+  await createNotification(
+    c.env.DB,
+    assignedUserId,
+    'COMPLAINT_ASSIGNED',
+    'Pengaduan baru di area Anda',
+    `${complaintNumber} — ${areaName?.name ?? 'Area'}`,
+    'complaint',
+    id,
+  );
+}
 
   return c.json({ complaintNumber, message: 'Pengaduan berhasil dikirim.' }, 201);
 });

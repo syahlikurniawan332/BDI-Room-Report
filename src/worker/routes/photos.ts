@@ -99,17 +99,58 @@ photoRoutes.get('/reports/:photoId', async (c) => {
 
 photoRoutes.get('/complaints/:photoId', async (c) => {
   const user = requireAuth(c);
-  if (!user || user.role !== 'ADMIN') return c.json({ error: 'Forbidden' }, 403);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
 
   const photoId = c.req.param('photoId');
-  const photo = await c.env.DB.prepare('SELECT * FROM complaint_photos WHERE id = ?')
+
+  const photo = await c.env.DB.prepare(
+    `SELECT
+       cp.r2_object_key,
+       cp.mime_type,
+       cp.deleted_at,
+       c.assigned_user_id
+     FROM complaint_photos cp
+     JOIN complaints c
+       ON c.id = cp.complaint_id
+     WHERE cp.id = ?`,
+  )
     .bind(photoId)
-    .first<{ r2_object_key: string; mime_type: string; deleted_at: string | null }>();
+    .first<{
+      r2_object_key: string;
+      mime_type: string;
+      deleted_at: string | null;
+      assigned_user_id: string | null;
+    }>();
 
-  if (!photo || photo.deleted_at) return c.json({ error: 'Not found' }, 404);
+  if (!photo || photo.deleted_at) {
+    return c.json({ error: 'Not found' }, 404);
+  }
 
-  const object = await c.env.PHOTO_BUCKET.get(photo.r2_object_key);
-  if (!object) return c.json({ error: 'File not found' }, 404);
+  /*
+   * Admin:
+   * boleh melihat semua foto pengaduan.
+   *
+   * CS:
+   * hanya boleh melihat foto dari pengaduan
+   * yang memang ditugaskan kepadanya.
+   */
+  if (
+    user.role === 'CS' &&
+    photo.assigned_user_id !== user.id
+  ) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
+
+  const object = await c.env.PHOTO_BUCKET.get(
+    photo.r2_object_key,
+  );
+
+  if (!object) {
+    return c.json({ error: 'File not found' }, 404);
+  }
 
   return new Response(object.body, {
     headers: {

@@ -39,6 +39,7 @@ const csLinks = [
   { to: '/cs/laporan/baru', label: 'Buat Laporan' },
   { to: '/cs/draft', label: 'Draft' },
   { to: '/cs/riwayat', label: 'Riwayat' },
+  { to: '/cs/pengaduan', label: 'Pengaduan' },
   { to: '/cs/notifikasi', label: 'Notifikasi' },
 ];
 
@@ -57,8 +58,8 @@ const adminMobileLinks = [
 
 const csMobileLinks = [
   { to: '/cs', label: 'Dashboard', icon: '⌂' },
-  { to: '/cs/laporan/baru', label: 'Buat Laporan', icon: '+' },
-  { to: '/cs/riwayat', label: 'Riwayat', icon: '◷' },
+  { to: '/cs/laporan/baru', label: 'Laporan', icon: '+' },
+  { to: '/cs/pengaduan', label: 'Pengaduan', icon: '!' },
 ];
 
 const mobileLinks = computed(() => {

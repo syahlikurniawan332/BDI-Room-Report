@@ -52,6 +52,21 @@ const router = createRouter({
           component: () => import('../views/cs/HistoryView.vue'),
         },
         {
+          path: 'riwayat',
+          name: 'cs-history',
+          component: () => import('../views/cs/HistoryView.vue'),
+        },
+        {
+          path: 'pengaduan',
+          name: 'cs-complaints',
+          component: () => import('../views/cs/ComplaintsView.vue'),
+        },
+        {
+          path: 'notifikasi',
+          name: 'cs-notifications',
+          component: () => import('../views/cs/NotificationsView.vue'),
+        },
+        {
           path: 'notifikasi',
           name: 'cs-notifications',
           component: () => import('../views/cs/NotificationsView.vue'),

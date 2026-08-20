@@ -15,6 +15,7 @@ export const REPORT_STATUS_LABELS: Record<ReportStatus, string> = {
 export const COMPLAINT_STATUS_LABELS: Record<ComplaintStatus, string> = {
   NEW: 'Baru',
   IN_PROGRESS: 'Diproses',
+  WAITING_VERIFICATION: 'Menunggu Verifikasi',
   RESOLVED: 'Selesai',
   REJECTED: 'Ditolak',
 };

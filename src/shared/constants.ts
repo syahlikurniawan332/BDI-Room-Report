@@ -11,7 +11,13 @@ export const REPORT_STATUSES = [
 
 export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
-export const COMPLAINT_STATUSES = ['NEW', 'IN_PROGRESS', 'RESOLVED', 'REJECTED'] as const;
+export const COMPLAINT_STATUSES = [
+  'NEW',
+  'IN_PROGRESS',
+  'WAITING_VERIFICATION',
+  'RESOLVED',
+  'REJECTED',
+] as const;
 
 export type ComplaintStatus = (typeof COMPLAINT_STATUSES)[number];
 
@@ -93,16 +99,37 @@ export interface PhotoPublic {
 
 export interface ComplaintPublic {
   id: string;
+
   complaintNumber: string;
+
   areaId: string;
+
   areaName?: string;
+
+  assignedUserId: string | null;
+
+  assignedUserName?: string | null;
+
   complaintText: string;
+
   status: ComplaintStatus;
+
   submittedAt: string;
+
+  assignedAt: string | null;
+
+  startedAt: string | null;
+
+  waitingVerificationAt: string | null;
+
   resolvedAt: string | null;
+
   adminNote: string | null;
+
   createdAt: string;
+
   updatedAt: string;
+
   photo?: ComplaintPhotoPublic | null;
 }
 
