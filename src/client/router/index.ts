@@ -4,13 +4,13 @@ import { useAuthStore } from '../stores/auth';
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'home', component: () => import('../views/HomeView.vue') },
     {
-      path: '/login',
+      path: '/',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
       meta: { guest: true },
     },
+    { path: '/login', redirect: '/' },
     {
       path: '/pengaduan',
       name: 'complaint-public',
@@ -160,7 +160,7 @@ router.beforeEach(async (to) => {
 
   const requiredRole = to.matched.find((r) => r.meta.role)?.meta.role as string | undefined;
   if (requiredRole && auth.user?.role !== requiredRole) {
-    return auth.isAdmin ? '/admin' : auth.isCs ? '/cs' : '/login';
+    return auth.isAdmin ? '/admin' : auth.isCs ? '/cs' : '/';
   }
 
   return true;

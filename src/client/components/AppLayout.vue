@@ -193,7 +193,7 @@ async function handleLogout() {
 
           <RouterLink
             v-if="!auth.isAuthenticated"
-            to="/login"
+            to="/"
             class="ml-1 rounded-full bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-emerald-800"
           >
             Masuk
