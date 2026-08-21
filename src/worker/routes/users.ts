@@ -102,6 +102,10 @@ userRoutes.patch('/:id', async (c) => {
     .first<DbUser>();
   if (!existing) return c.json({ error: 'Not found' }, 404);
 
+  if (userId === admin.id && parsed.data.isActive === false) {
+    return c.json({ error: 'Akun yang sedang digunakan tidak dapat dinonaktifkan.' }, 400);
+  }
+
   const updates: string[] = [];
   const values: unknown[] = [];
 

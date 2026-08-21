@@ -67,8 +67,8 @@ function onPhotoChange(event: Event) {
 async function submit() {
   error.value = '';
   message.value = '';
-  if (!areaId.value || complaintText.value.trim().length < 10) {
-    error.value = 'Pilih area dan isi pengaduan minimal 10 karakter.';
+  if (!areaId.value || !complaintText.value.trim()) {
+    error.value = 'Pilih area dan isi pengaduan.';
     return;
   }
   if (!turnstileToken.value) {

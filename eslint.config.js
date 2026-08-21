@@ -9,6 +9,15 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
   {
+    files: ['**/*.vue'],
+    languageOptions: {
+      parserOptions: {
+        parser: tseslint.parser,
+        extraFileExtensions: ['.vue'],
+      },
+    },
+  },
+  {
     files: ['**/*.{ts,vue}'],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
@@ -16,6 +25,12 @@ export default tseslint.config(
     rules: {
       'vue/multi-word-component-names': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 );

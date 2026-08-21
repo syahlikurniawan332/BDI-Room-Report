@@ -22,7 +22,7 @@ export const publicRoutes = new Hono<AppContext>();
 
 const publicComplaintSchema = z.object({
   areaId: z.string().min(1),
-  complaintText: z.string().min(10).max(5000),
+  complaintText: z.string().trim().min(1).max(5000),
   turnstileToken: z.string().min(1),
 });
 

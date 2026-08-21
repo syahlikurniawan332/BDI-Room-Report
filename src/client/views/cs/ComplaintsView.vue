@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { apiGet, apiPost, photoUrl } from '../../lib/api';
+import { apiGet, apiPost, apiUpload, photoUrl } from '../../lib/api';
 
 interface Complaint {
   id: string;
@@ -34,6 +34,8 @@ const success = ref('');
 
 const selected = ref<Complaint | null>(null);
 const detailLoading = ref(false);
+const completionTarget = ref<Complaint | null>(null);
+const completionPhoto = ref<File | null>(null);
 
 const activeComplaints = computed(() =>
   complaints.value.filter((complaint) =>
@@ -137,25 +139,39 @@ async function startComplaint(complaint: Complaint) {
   }
 }
 
-async function completeComplaint(complaint: Complaint) {
-  const confirmed = window.confirm(
-    `Tandai pengaduan ${complaint.complaintNumber} sebagai selesai dikerjakan?`,
-  );
+function openCompletionDialog(complaint: Complaint) {
+  completionTarget.value = complaint;
+  completionPhoto.value = null;
+}
 
-  if (!confirmed) {
-    return;
-  }
+function closeCompletionDialog() {
+  if (actionId.value) return;
+  completionTarget.value = null;
+  completionPhoto.value = null;
+}
+
+function selectCompletionPhoto(event: Event) {
+  completionPhoto.value = (event.target as HTMLInputElement).files?.[0] ?? null;
+}
+
+async function completeComplaint() {
+  const complaint = completionTarget.value;
+  if (!complaint) return;
 
   actionId.value = complaint.id;
   error.value = '';
   success.value = '';
 
   try {
-    await apiPost(`/complaints/${complaint.id}/complete`, {});
+    const formData = new FormData();
+    if (completionPhoto.value) formData.append('photo', completionPhoto.value);
+    await apiUpload(`/complaints/${complaint.id}/complete`, formData);
 
     success.value = 'Pengaduan telah dikirim untuk verifikasi admin.';
-
+    completionTarget.value = null;
+    completionPhoto.value = null;
     await loadComplaints();
+    if (selected.value?.id === complaint.id) await openDetail(complaint);
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Gagal menyelesaikan pengaduan.';
   } finally {
@@ -318,7 +334,7 @@ onMounted(loadComplaints);
               type="button"
               class="btn-primary w-full"
               :disabled="actionId === complaint.id"
-              @click="completeComplaint(complaint)"
+              @click="openCompletionDialog(complaint)"
             >
               {{ actionId === complaint.id ? 'Memproses...' : 'Selesai Dikerjakan' }}
             </button>
@@ -460,7 +476,7 @@ onMounted(loadComplaints);
               type="button"
               class="btn-primary w-full"
               :disabled="actionId === selected.id"
-              @click="completeComplaint(selected)"
+              @click="openCompletionDialog(selected)"
             >
               {{ actionId === selected.id ? 'Memproses...' : 'Selesai Dikerjakan' }}
             </button>
@@ -481,6 +497,58 @@ onMounted(loadComplaints);
           </div>
         </div>
       </div>
+    </div>
+
+    <div
+      v-if="completionTarget"
+      class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4"
+      @click.self="closeCompletionDialog"
+    >
+      <section class="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100">
+          Selesai Dikerjakan
+        </h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          {{ completionTarget.complaintNumber }} akan dikirim untuk verifikasi admin.
+        </p>
+
+        <div class="mt-5">
+          <label class="label" for="completion-photo">Bukti pendukung (opsional)</label>
+          <input
+            id="completion-photo"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            capture="environment"
+            class="input"
+            @change="selectCompletionPhoto"
+          />
+          <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            JPEG, PNG, atau WebP. Maksimal 10 MB.
+          </p>
+          <p v-if="completionPhoto" class="mt-2 text-sm font-medium text-emerald-600">
+            Dipilih: {{ completionPhoto.name }}
+          </p>
+        </div>
+
+        <div class="mt-6 flex gap-2">
+          <button
+            type="button"
+            class="btn-primary flex-1"
+            :disabled="Boolean(actionId)"
+            @click="completeComplaint"
+          >
+            {{ actionId ? 'Mengirim...' : 'Kirim untuk Verifikasi' }}
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            :disabled="Boolean(actionId)"
+            @click="closeCompletionDialog"
+          >
+            Batal
+          </button>
+        </div>
+      </section>
     </div>
   </div>
 </template>

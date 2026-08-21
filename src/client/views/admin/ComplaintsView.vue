@@ -19,6 +19,7 @@ const success = ref('');
 
 const showReturnForm = ref(false);
 const returnNote = ref('');
+const previewPhotoId = ref<string | null>(null);
 
 const waitingCount = computed(
   () => complaints.value.filter((item) => item.status === 'WAITING_VERIFICATION').length,
@@ -89,6 +90,29 @@ async function verifyComplaint() {
     await refreshSelected();
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Gagal memverifikasi pengaduan.';
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function verifyAllComplaints() {
+  if (waitingCount.value === 0) return;
+
+  const confirmed = window.confirm(
+    `Verifikasi selesai untuk ${waitingCount.value} pengaduan yang sedang menunggu verifikasi?`,
+  );
+  if (!confirmed) return;
+
+  actionLoading.value = true;
+  error.value = '';
+  success.value = '';
+
+  try {
+    const result = await apiPost<{ verifiedCount: number }>('/complaints/verify-all', {});
+    success.value = `${result.verifiedCount} pengaduan berhasil diverifikasi selesai.`;
+    await refreshSelected();
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Gagal memverifikasi semua pengaduan.';
   } finally {
     actionLoading.value = false;
   }
@@ -219,16 +243,23 @@ onMounted(async () => {
       <section
         class="overflow-hidden rounded-2xl border border-[#e4dccb] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
       >
-        <div
-          class="flex items-center justify-between border-b border-[#eee7d8] px-5 py-4 dark:border-slate-800"
-        >
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee7d8] px-5 py-4 dark:border-slate-800">
           <h2 class="font-semibold text-[#17233d] dark:text-slate-100">Daftar pengaduan</h2>
 
-          <span
-            class="rounded-full bg-[#f3ecdc] px-3 py-1 text-xs font-semibold text-[#17233d] dark:bg-slate-800 dark:text-slate-200"
-          >
-            {{ complaints.length }} pengaduan
-          </span>
+          <div class="flex items-center gap-2">
+            <button
+              v-if="waitingCount > 0"
+              type="button"
+              class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              :disabled="actionLoading"
+              @click="verifyAllComplaints"
+            >
+              Verifikasi Semua Selesai ({{ waitingCount }})
+            </button>
+            <span class="rounded-full bg-[#f3ecdc] px-3 py-1 text-xs font-semibold text-[#17233d] dark:bg-slate-800 dark:text-slate-200">
+              {{ complaints.length }} pengaduan
+            </span>
+          </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -239,6 +270,7 @@ onMounted(async () => {
               <tr>
                 <th class="px-5 py-3">No.</th>
                 <th class="px-4 py-3">Area</th>
+                <th class="px-4 py-3">Foto</th>
                 <th class="px-4 py-3">Status</th>
                 <th class="px-5 py-3" aria-label="Pilih" />
               </tr>
@@ -246,13 +278,13 @@ onMounted(async () => {
 
             <tbody class="divide-y divide-[#eee7d8] dark:divide-slate-800">
               <tr v-if="loading">
-                <td colspan="4" class="px-5 py-10 text-center text-slate-500 dark:text-slate-400">
+                <td colspan="5" class="px-5 py-10 text-center text-slate-500 dark:text-slate-400">
                   Memuat pengaduan...
                 </td>
               </tr>
 
               <tr v-else-if="!complaints.length">
-                <td colspan="4" class="px-5 py-10 text-center text-slate-500 dark:text-slate-400">
+                <td colspan="5" class="px-5 py-10 text-center text-slate-500 dark:text-slate-400">
                   Belum ada pengaduan.
                 </td>
               </tr>
@@ -270,6 +302,23 @@ onMounted(async () => {
 
                 <td class="px-4 py-4 text-slate-700 dark:text-slate-300">
                   {{ item.areaName }}
+                </td>
+
+                <td class="px-4 py-4" @click.stop>
+                  <button
+                    v-if="item.completionPhoto"
+                    type="button"
+                    class="block overflow-hidden rounded-lg border border-slate-200 transition hover:border-[#17233d] hover:shadow-md dark:border-slate-700"
+                    title="Lihat foto bukti"
+                    @click="previewPhotoId = item.completionPhoto?.id ?? null"
+                  >
+                    <img
+                      :src="photoUrl(item.completionPhoto.id, 'complaint')"
+                      alt="Bukti penyelesaian"
+                      class="h-12 w-12 object-cover"
+                    />
+                  </button>
+                  <span v-else class="text-xs text-slate-400">Tidak ada foto</span>
                 </td>
 
                 <td class="px-4 py-4">
@@ -357,6 +406,23 @@ onMounted(async () => {
                 alt="Foto pengaduan"
                 class="max-h-72 w-full rounded-xl border border-[#e4dccb] bg-[#fdfbf6] object-contain dark:border-slate-700 dark:bg-slate-950"
               />
+            </div>
+
+            <div v-if="selected.completionPhoto">
+              <p class="mb-2 text-sm font-semibold text-[#17233d] dark:text-slate-100">
+                Bukti penyelesaian dari CS
+              </p>
+              <button
+                type="button"
+                class="block w-full"
+                @click="previewPhotoId = selected.completionPhoto?.id ?? null"
+              >
+                <img
+                  :src="photoUrl(selected.completionPhoto.id, 'complaint')"
+                  alt="Bukti penyelesaian dari CS"
+                  class="max-h-72 w-full rounded-xl border border-[#e4dccb] bg-[#fdfbf6] object-contain dark:border-slate-700 dark:bg-slate-950"
+                />
+              </button>
             </div>
 
             <!-- Penanggung jawab -->
@@ -515,6 +581,26 @@ onMounted(async () => {
           </div>
         </template>
       </section>
+    </div>
+    <div
+      v-if="previewPhotoId"
+      class="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 p-4"
+      @click="previewPhotoId = null"
+    >
+      <button
+        type="button"
+        class="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-2 text-xl text-slate-900"
+        aria-label="Tutup foto"
+        @click="previewPhotoId = null"
+      >
+        &times;
+      </button>
+      <img
+        :src="photoUrl(previewPhotoId, 'complaint')"
+        alt="Bukti penyelesaian diperbesar"
+        class="max-h-[90vh] max-w-[95vw] rounded-xl object-contain"
+        @click.stop
+      />
     </div>
   </div>
 </template>

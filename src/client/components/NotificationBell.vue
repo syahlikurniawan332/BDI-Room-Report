@@ -1,25 +1,36 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useNotificationStore } from '../stores/notifications';
 import { useAuthStore } from '../stores/auth';
 import { formatWib } from '../lib/utils';
+import { notificationEntityLink } from '../lib/notification-links';
 
 const auth = useAuthStore();
 const store = useNotificationStore();
 const { unreadCount, items } = storeToRefs(store);
 const open = ref(false);
+const container = ref<HTMLElement | null>(null);
+const router = useRouter();
 
 const listPath = auth.isAdmin ? '/admin/notifikasi' : '/cs/notifikasi';
 
 onMounted(() => {
   if (auth.isAuthenticated) store.startPolling();
+  document.addEventListener('pointerdown', closeOnOutsideClick);
 });
 
 onUnmounted(() => {
   if (!auth.isAuthenticated) store.stopPolling();
+  document.removeEventListener('pointerdown', closeOnOutsideClick);
 });
+
+function closeOnOutsideClick(event: PointerEvent) {
+  if (open.value && !container.value?.contains(event.target as Node)) {
+    open.value = false;
+  }
+}
 
 async function toggle() {
   open.value = !open.value;
@@ -29,10 +40,22 @@ async function toggle() {
 async function markAllRead() {
   await store.markRead(undefined, true);
 }
+
+async function openNotification(item: (typeof items.value)[number]) {
+  if (!item.readAt) await store.markRead([item.id]);
+  open.value = false;
+
+  const target = notificationEntityLink(
+    auth.user?.role,
+    item.relatedEntityType,
+    item.relatedEntityId,
+  );
+  if (target) await router.push(target);
+}
 </script>
 
 <template>
-  <div class="relative">
+  <div ref="container" class="relative">
     <button
       type="button"
       class="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100"
@@ -68,7 +91,7 @@ async function markAllRead() {
           type="button"
           class="block w-full border-b border-slate-100 px-4 py-3 text-left hover:bg-slate-50"
           :class="{ 'bg-blue-50': !item.readAt }"
-          @click="store.markRead([item.id])"
+          @click="openNotification(item)"
         >
           <p class="text-sm font-medium">{{ item.title }}</p>
           <p class="text-xs text-slate-600">{{ item.message }}</p>

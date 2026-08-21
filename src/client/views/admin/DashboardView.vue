@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { apiGet } from '../../lib/api';
-import { formatWib } from '../../lib/utils';
 
 interface CsActivity {
   id: string;
@@ -14,8 +13,6 @@ interface CsActivity {
   remainingAreas: number;
   completedToday: boolean;
 
-  lastSubmittedAt: string | null;
-  lastStatus: string | null;
 }
 
 const stats = ref({
@@ -29,41 +26,23 @@ const stats = ref({
 });
 const csActivity = ref<CsActivity[]>([]);
 const loading = ref(true);
+const currentTime = ref(new Date());
+let dateTimer: ReturnType<typeof setInterval> | null = null;
 
-function formatStatus(status: string | null): string {
-  switch (status) {
-    case 'APPROVED':
-      return 'Disetujui';
-    case 'SUBMITTED':
-      return 'Menunggu Review';
-    case 'RESUBMITTED':
-      return 'Dikirim Ulang';
-    case 'REVISION_REQUIRED':
-      return 'Perlu Perbaikan';
-    case 'REJECTED':
-      return 'Ditolak';
-    default:
-      return 'Belum Ada Laporan';
-  }
-}
-
-function statusClass(status: string | null): string {
-  switch (status) {
-    case 'APPROVED':
-      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300';
-    case 'SUBMITTED':
-    case 'RESUBMITTED':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300';
-    case 'REVISION_REQUIRED':
-      return 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300';
-    case 'REJECTED':
-      return 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300';
-    default:
-      return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
-  }
-}
+const todayLabel = computed(() =>
+  new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(currentTime.value),
+);
 
 onMounted(async () => {
+  dateTimer = setInterval(() => {
+    currentTime.value = new Date();
+  }, 60_000);
+
   try {
     const data = await apiGet<{ stats: typeof stats.value; csActivity: CsActivity[] }>(
       '/dashboard/admin',
@@ -73,6 +52,10 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+});
+
+onUnmounted(() => {
+  if (dateTimer) clearInterval(dateTimer);
 });
 </script>
 
@@ -219,9 +202,11 @@ onMounted(async () => {
       class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 md:block"
     >
       <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
-        <h2 class="font-semibold text-slate-900 dark:text-slate-100">Aktivitas CS</h2>
+        <h2 class="font-semibold text-slate-900 dark:text-slate-100">
+          Aktivitas CS per tanggal {{ todayLabel }}
+        </h2>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Status laporan terakhir setiap Cleaning Service.
+          Progres pekerjaan Cleaning Service hari ini.
         </p>
       </div>
 
@@ -231,8 +216,6 @@ onMounted(async () => {
             <tr class="text-left text-slate-500 dark:text-slate-400">
               <th class="px-5 py-3">Nama</th>
               <th class="px-5 py-3">Progres Hari Ini</th>
-              <th class="px-5 py-3">Laporan Terakhir</th>
-              <th class="px-5 py-3">Status Terakhir</th>
             </tr>
           </thead>
 
@@ -300,18 +283,6 @@ onMounted(async () => {
                 </div>
               </td>
 
-              <td class="px-5 py-4 text-slate-600 dark:text-slate-300">
-                {{ formatWib(cs.lastSubmittedAt) }}
-              </td>
-
-              <td class="px-5 py-4">
-                <span
-                  class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
-                  :class="statusClass(cs.lastStatus)"
-                >
-                  {{ formatStatus(cs.lastStatus) }}
-                </span>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -321,8 +292,10 @@ onMounted(async () => {
     <!-- Aktivitas CS Mobile -->
     <section class="space-y-3 md:hidden">
       <div>
-        <h2 class="font-semibold text-slate-900 dark:text-slate-100">Aktivitas CS</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Status laporan terakhir setiap CS.</p>
+        <h2 class="font-semibold text-slate-900 dark:text-slate-100">
+          Aktivitas CS per tanggal {{ todayLabel }}
+        </h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Progres pekerjaan CS hari ini.</p>
       </div>
 
       <article
@@ -330,28 +303,9 @@ onMounted(async () => {
         :key="cs.id"
         class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
       >
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <h3 class="font-semibold text-slate-900 dark:text-slate-100">
-              {{ cs.displayName }}
-            </h3>
-
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {{
-                cs.lastSubmittedAt
-                  ? `Terakhir melapor ${formatWib(cs.lastSubmittedAt)}`
-                  : 'Belum membuat laporan'
-              }}
-            </p>
-          </div>
-
-          <span
-            class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
-            :class="statusClass(cs.lastStatus)"
-          >
-            {{ formatStatus(cs.lastStatus) }}
-          </span>
-        </div>
+        <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+          {{ cs.displayName }}
+        </h3>
         <div
           v-if="cs.assignedAreas > 0"
           class="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800"

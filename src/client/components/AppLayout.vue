@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell.vue';
+import BackButton from './BackButton.vue';
 
 const auth = useAuthStore();
 const route = useRoute();
@@ -119,14 +120,15 @@ async function handleLogout() {
           <RouterLink
             v-if="!auth.isAuthenticated"
             to="/pengaduan"
-            class="hidden rounded-full px-3 py-2 font-medium transition sm:inline-flex"
+            class="inline-flex rounded-full px-3 py-2 font-medium transition"
             :class="
               isActiveLink('/pengaduan')
                 ? 'bg-[#17233d] text-white shadow-sm'
                 : 'text-slate-600 hover:bg-[#f3ecdc] hover:text-[#17233d]'
             "
           >
-            Pengaduan Publik
+            <span class="sm:hidden">Pengaduan</span>
+            <span class="hidden sm:inline">Pengaduan Publik</span>
           </RouterLink>
 
           <template v-if="auth.isAuthenticated">
@@ -174,6 +176,29 @@ async function handleLogout() {
               </button>
 
               <NotificationBell />
+
+              <button
+                type="button"
+                class="flex h-10 w-10 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-950/40 lg:hidden"
+                title="Keluar"
+                aria-label="Keluar"
+                @click="handleLogout"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  class="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M10 17l5-5-5-5M15 12H3M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
             </div>
 
             <div class="ml-1 hidden rounded-full bg-[#f3ecdc] px-3 py-2 dark:bg-slate-800 xl:block">
@@ -203,6 +228,7 @@ async function handleLogout() {
     </header>
 
     <main class="mx-auto max-w-7xl px-4 py-7 pb-28 sm:px-6 lg:pb-7 print:max-w-none print:p-0">
+      <BackButton v-if="!['/', '/admin', '/cs'].includes(route.path)" />
       <slot />
     </main>
     <nav

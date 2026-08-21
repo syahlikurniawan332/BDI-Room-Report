@@ -1,7 +1,11 @@
 import { addDaysUtc, nowUtcIso, toWibDateString } from '@shared/datetime';
 import { getSetting } from '../db/mappers';
-import { sendEmail } from '../lib/email';
-import { countWorkingDaysBetween, loadActiveHolidayDates } from '../lib/working-days';
+import { buildInactiveReminderEmail, sendEmail } from '../lib/email';
+import {
+  countWorkingDaysBetween,
+  isWorkingDayWib,
+  loadActiveHolidayDates,
+} from '../lib/working-days';
 import type { Env } from '../types';
 import { generateId } from '@shared/ids';
 
@@ -80,10 +84,18 @@ async function sendInactiveReminders(env: Env) {
 
   const holidays = await loadActiveHolidayDates(env.DB);
   const todayWib = toWibDateString();
+  if (!isWorkingDayWib(todayWib, holidays)) return;
 
   const csUsers = await env.DB.prepare(
-    `SELECT id, username, display_name, email FROM users WHERE role = 'CS' AND is_active = 1`,
-  ).all<{ id: string; username: string; display_name: string; email: string }>();
+    `SELECT id, username, display_name, email, created_at
+     FROM users WHERE role = 'CS' AND is_active = 1`,
+  ).all<{
+    id: string;
+    username: string;
+    display_name: string;
+    email: string;
+    created_at: string;
+  }>();
 
   for (const cs of csUsers.results ?? []) {
     const lastReport = await env.DB.prepare(
@@ -93,15 +105,14 @@ async function sendInactiveReminders(env: Env) {
       .bind(cs.id)
       .first<{ last_submitted: string | null }>();
 
-    const lastSubmitted = lastReport?.last_submitted;
-    if (!lastSubmitted) continue;
-
-    const lastDateWib = toWibDateString(new Date(lastSubmitted));
-    const workingDays = countWorkingDaysBetween(lastDateWib, todayWib, holidays);
+    const lastSubmitted = lastReport?.last_submitted ?? null;
+    const inactivityStartedAt = lastSubmitted ?? cs.created_at;
+    const inactivityStartDateWib = toWibDateString(new Date(inactivityStartedAt));
+    const workingDays = countWorkingDaysBetween(inactivityStartDateWib, todayWib, holidays);
 
     if (workingDays < threshold) continue;
 
-    const inactivityKey = `${cs.id}:${todayWib}`;
+    const inactivityKey = `${cs.id}:${inactivityStartedAt}`;
     const existing = await env.DB.prepare(
       `SELECT id FROM reminder_logs WHERE user_id = ? AND inactivity_key = ?`,
     )
@@ -116,15 +127,14 @@ async function sendInactiveReminders(env: Env) {
       .bind(cs.id)
       .first<{ count: number }>();
 
-    const subject = `[BDI Cleaning] CS tidak aktif: ${cs.display_name}`;
-    const html = `<p>Cleaning Service <strong>${cs.display_name}</strong> belum mengirim laporan selama ${workingDays} hari kerja.</p>
-<ul>
-<li>Username: ${cs.username}</li>
-<li>Email: ${cs.email}</li>
-<li>Laporan terakhir: ${lastSubmitted}</li>
-<li>Hari tidak aktif: ${workingDays}</li>
-<li>Draft aktif: ${draftCount?.count ?? 0}</li>
-</ul>`;
+    const { subject, html } = buildInactiveReminderEmail({
+      displayName: cs.display_name,
+      username: cs.username,
+      email: cs.email,
+      lastSubmittedAt: lastSubmitted,
+      workingDaysInactive: workingDays,
+      draftCount: draftCount?.count ?? 0,
+    });
 
     const sent = await sendEmail(env, adminEmail, subject, html);
     if (!sent) continue;

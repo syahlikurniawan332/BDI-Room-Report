@@ -1,4 +1,10 @@
-import { isWeekendWib, toWibDateString } from '@shared/datetime';
+import { toWibDateString } from '@shared/datetime';
+
+export function isWorkingDayWib(dateStr: string, holidays: Set<string>): boolean {
+  const date = new Date(`${dateStr}T12:00:00+07:00`);
+  const isSunday = date.getUTCDay() === 0;
+  return !isSunday && !holidays.has(dateStr);
+}
 
 export function countWorkingDaysBetween(
   startDateExclusive: string,
@@ -13,7 +19,7 @@ export function countWorkingDaysBetween(
 
   while (cursor <= end) {
     const dateStr = toWibDateString(cursor);
-    if (!isWeekendWib(dateStr) && !holidays.has(dateStr)) {
+    if (isWorkingDayWib(dateStr, holidays)) {
       count += 1;
     }
     cursor.setUTCDate(cursor.getUTCDate() + 1);

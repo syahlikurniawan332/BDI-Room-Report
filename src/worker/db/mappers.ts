@@ -85,6 +85,14 @@ export interface DbComplaint {
   // Field tambahan dari hasil JOIN
   area_name?: string;
   assigned_user_name?: string | null;
+  photo_id?: string | null;
+  photo_mime_type?: string | null;
+  photo_byte_size?: number | null;
+  photo_uploaded_at?: string | null;
+  completion_photo_id?: string | null;
+  completion_photo_mime_type?: string | null;
+  completion_photo_byte_size?: number | null;
+  completion_photo_uploaded_at?: string | null;
 }
 
 export function mapUser(row: DbUser) {
@@ -159,6 +167,23 @@ export function mapPhoto(row: DbPhoto) {
 }
 
 export function mapComplaint(row: DbComplaint) {
+  const photo = row.photo_id
+    ? {
+        id: row.photo_id,
+        mimeType: row.photo_mime_type,
+        byteSize: row.photo_byte_size,
+        uploadedAt: row.photo_uploaded_at,
+      }
+    : null;
+  const completionPhoto = row.completion_photo_id
+    ? {
+        id: row.completion_photo_id,
+        mimeType: row.completion_photo_mime_type,
+        byteSize: row.completion_photo_byte_size,
+        uploadedAt: row.completion_photo_uploaded_at,
+      }
+    : null;
+
   return {
     id: row.id,
     complaintNumber: row.complaint_number,
@@ -182,6 +207,8 @@ export function mapComplaint(row: DbComplaint) {
 
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    photo,
+    completionPhoto,
   };
 }
 

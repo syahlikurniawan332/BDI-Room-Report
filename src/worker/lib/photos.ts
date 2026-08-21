@@ -23,8 +23,14 @@ export function buildReportPhotoKey(
   return `reports/${reportId}/${photoType.toLowerCase()}_v${version}.${ext}`;
 }
 
-export function buildComplaintPhotoKey(complaintId: string, ext: string): string {
-  return `complaints/${complaintId}/photo.${ext}`;
+export function buildComplaintPhotoKey(
+  complaintId: string,
+  ext: string,
+  photoType: 'submission' | 'completion' = 'submission',
+  uniqueSuffix?: string,
+): string {
+  if (photoType === 'submission') return `complaints/${complaintId}/photo.${ext}`;
+  return `complaints/${complaintId}/completion_${uniqueSuffix ?? 'evidence'}.${ext}`;
 }
 
 export function mimeToExt(mime: string): string {

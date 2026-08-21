@@ -4,6 +4,7 @@ export interface Env {
   ASSETS: Fetcher;
   APP_ENV: string;
   RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_SITE_KEY?: string;
   ADMIN_NOTIFICATION_EMAIL?: string;

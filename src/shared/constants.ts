@@ -131,6 +131,7 @@ export interface ComplaintPublic {
   updatedAt: string;
 
   photo?: ComplaintPhotoPublic | null;
+  completionPhoto?: ComplaintPhotoPublic | null;
 }
 
 export interface ComplaintPhotoPublic {

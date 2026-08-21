@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { verifyPassword, hashPassword } from '../src/shared/password';
 import { countWorkingDaysBetween } from '../src/worker/lib/working-days';
+import { isWorkingDayWib } from '../src/worker/lib/working-days';
+import { buildInactiveReminderEmail } from '../src/worker/lib/email';
 import { formatWib, toWibDateString } from '../src/shared/datetime';
 
 describe('password', () => {
@@ -28,10 +30,32 @@ describe('password', () => {
 });
 
 describe('working days', () => {
-  it('skips weekends and holidays', () => {
+  it('counts Monday through Saturday and skips Sunday and holidays', () => {
     const holidays = new Set(['2026-08-17']);
     const days = countWorkingDaysBetween('2026-08-13', '2026-08-18', holidays);
-    expect(days).toBe(2);
+    expect(days).toBe(3);
+    expect(isWorkingDayWib('2026-08-15', holidays)).toBe(true);
+    expect(isWorkingDayWib('2026-08-16', holidays)).toBe(false);
+    expect(isWorkingDayWib('2026-08-17', holidays)).toBe(false);
+  });
+});
+
+describe('inactive reminder email', () => {
+  it('builds the admin notification template safely', () => {
+    const email = buildInactiveReminderEmail({
+      displayName: 'CS <Contoh>',
+      username: 'cs.contoh',
+      email: 'cs@example.com',
+      lastSubmittedAt: null,
+      workingDaysInactive: 3,
+      draftCount: 1,
+    });
+
+    expect(email.subject).toContain('3 hari kerja');
+    expect(email.html).toContain('Peringatan Ketidakaktifan CS');
+    expect(email.html).toContain('Senin–Sabtu');
+    expect(email.html).toContain('CS &lt;Contoh&gt;');
+    expect(email.html).not.toContain('CS <Contoh>');
   });
 });
 

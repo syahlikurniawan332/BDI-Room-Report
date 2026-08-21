@@ -28,5 +28,6 @@
   },
   "vars": {
     "APP_ENV": "development",
+    "ADMIN_NOTIFICATION_EMAIL": "canvaprobos@gmail.com",
   },
 }

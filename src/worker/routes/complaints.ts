@@ -1,19 +1,20 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { AppContext } from '../types';
-import { nowUtcIso } from '@shared/datetime';
-import { mapComplaint, writeAuditLog, type DbComplaint } from '../db/mappers';
+import { addDaysUtc, nowUtcIso } from '@shared/datetime';
+import { mapComplaint, writeAuditLog, type DbComplaint, getSetting } from '../db/mappers';
 import { requireAdmin, requireAuth, requireCs } from '../middleware/auth';
 import { createNotification, notifyAdmins } from '../lib/notifications';
+import { generateId } from '@shared/ids';
+import {
+  buildComplaintPhotoKey,
+  mimeToExt,
+  sha256Hex,
+  uploadToR2,
+  validatePhotoFile,
+} from '../lib/photos';
 
 export const complaintRoutes = new Hono<AppContext>();
-
-interface DbComplaintPhotoSummary {
-  id: string;
-  mime_type: string;
-  byte_size: number;
-  uploaded_at: string;
-}
 
 const updateComplaintSchema = z.object({
   status: z.enum(['NEW', 'IN_PROGRESS', 'RESOLVED', 'REJECTED']).optional(),
@@ -37,12 +38,32 @@ complaintRoutes.get('/', async (c) => {
     SELECT
       c.*,
       a.name AS area_name,
-      assigned_user.display_name AS assigned_user_name
+      assigned_user.display_name AS assigned_user_name,
+      submission_photo.id AS photo_id,
+      submission_photo.mime_type AS photo_mime_type,
+      submission_photo.byte_size AS photo_byte_size,
+      submission_photo.uploaded_at AS photo_uploaded_at,
+      completion_photo.id AS completion_photo_id,
+      completion_photo.mime_type AS completion_photo_mime_type,
+      completion_photo.byte_size AS completion_photo_byte_size,
+      completion_photo.uploaded_at AS completion_photo_uploaded_at
     FROM complaints c
     JOIN areas a
       ON a.id = c.area_id
     LEFT JOIN users assigned_user
       ON assigned_user.id = c.assigned_user_id
+    LEFT JOIN complaint_photos submission_photo
+      ON submission_photo.id = (
+        SELECT cp.id FROM complaint_photos cp
+        WHERE cp.complaint_id = c.id AND cp.photo_type = 'SUBMISSION' AND cp.deleted_at IS NULL
+        ORDER BY cp.uploaded_at DESC LIMIT 1
+      )
+    LEFT JOIN complaint_photos completion_photo
+      ON completion_photo.id = (
+        SELECT cp.id FROM complaint_photos cp
+        WHERE cp.complaint_id = c.id AND cp.photo_type = 'COMPLETION_EVIDENCE' AND cp.deleted_at IS NULL
+        ORDER BY cp.uploaded_at DESC LIMIT 1
+      )
   `;
 
   const binds: unknown[] = [];
@@ -79,12 +100,32 @@ complaintRoutes.get('/mine', async (c) => {
     SELECT
       c.*,
       a.name AS area_name,
-      assigned_user.display_name AS assigned_user_name
+      assigned_user.display_name AS assigned_user_name,
+      submission_photo.id AS photo_id,
+      submission_photo.mime_type AS photo_mime_type,
+      submission_photo.byte_size AS photo_byte_size,
+      submission_photo.uploaded_at AS photo_uploaded_at,
+      completion_photo.id AS completion_photo_id,
+      completion_photo.mime_type AS completion_photo_mime_type,
+      completion_photo.byte_size AS completion_photo_byte_size,
+      completion_photo.uploaded_at AS completion_photo_uploaded_at
     FROM complaints c
     JOIN areas a
       ON a.id = c.area_id
     LEFT JOIN users assigned_user
       ON assigned_user.id = c.assigned_user_id
+    LEFT JOIN complaint_photos submission_photo
+      ON submission_photo.id = (
+        SELECT cp.id FROM complaint_photos cp
+        WHERE cp.complaint_id = c.id AND cp.photo_type = 'SUBMISSION' AND cp.deleted_at IS NULL
+        ORDER BY cp.uploaded_at DESC LIMIT 1
+      )
+    LEFT JOIN complaint_photos completion_photo
+      ON completion_photo.id = (
+        SELECT cp.id FROM complaint_photos cp
+        WHERE cp.complaint_id = c.id AND cp.photo_type = 'COMPLETION_EVIDENCE' AND cp.deleted_at IS NULL
+        ORDER BY cp.uploaded_at DESC LIMIT 1
+      )
     WHERE c.assigned_user_id = ?
   `;
 
@@ -122,12 +163,32 @@ complaintRoutes.get('/:id', async (c) => {
     `SELECT
        c.*,
        a.name AS area_name,
-       assigned_user.display_name AS assigned_user_name
+       assigned_user.display_name AS assigned_user_name,
+       submission_photo.id AS photo_id,
+       submission_photo.mime_type AS photo_mime_type,
+       submission_photo.byte_size AS photo_byte_size,
+       submission_photo.uploaded_at AS photo_uploaded_at,
+       completion_photo.id AS completion_photo_id,
+       completion_photo.mime_type AS completion_photo_mime_type,
+       completion_photo.byte_size AS completion_photo_byte_size,
+       completion_photo.uploaded_at AS completion_photo_uploaded_at
      FROM complaints c
      JOIN areas a
        ON a.id = c.area_id
      LEFT JOIN users assigned_user
        ON assigned_user.id = c.assigned_user_id
+     LEFT JOIN complaint_photos submission_photo
+       ON submission_photo.id = (
+         SELECT cp.id FROM complaint_photos cp
+         WHERE cp.complaint_id = c.id AND cp.photo_type = 'SUBMISSION' AND cp.deleted_at IS NULL
+         ORDER BY cp.uploaded_at DESC LIMIT 1
+       )
+     LEFT JOIN complaint_photos completion_photo
+       ON completion_photo.id = (
+         SELECT cp.id FROM complaint_photos cp
+         WHERE cp.complaint_id = c.id AND cp.photo_type = 'COMPLETION_EVIDENCE' AND cp.deleted_at IS NULL
+         ORDER BY cp.uploaded_at DESC LIMIT 1
+       )
      WHERE c.id = ?`,
   )
     .bind(complaintId)
@@ -147,33 +208,8 @@ complaintRoutes.get('/:id', async (c) => {
     return c.json({ error: 'Forbidden' }, 403);
   }
 
-  const photo = await c.env.DB.prepare(
-    `SELECT
-         id,
-         mime_type,
-         byte_size,
-         uploaded_at
-       FROM complaint_photos
-       WHERE complaint_id = ?
-         AND deleted_at IS NULL
-       LIMIT 1`,
-  )
-    .bind(complaintId)
-    .first<DbComplaintPhotoSummary>();
-
   return c.json({
-    complaint: {
-      ...mapComplaint(complaint),
-
-      photo: photo
-        ? {
-            id: photo.id,
-            mimeType: photo.mime_type,
-            byteSize: photo.byte_size,
-            uploadedAt: photo.uploaded_at,
-          }
-        : null,
-    },
+    complaint: mapComplaint(complaint),
   });
 });
 
@@ -277,19 +313,84 @@ complaintRoutes.post('/:id/complete', async (c) => {
   }
 
   const now = nowUtcIso();
+  const contentType = c.req.header('Content-Type') ?? '';
+  let evidencePhoto: File | null = null;
 
-  await c.env.DB.prepare(
-    `UPDATE complaints
-       SET
-         status = 'WAITING_VERIFICATION',
-         waiting_verification_at = ?,
-         updated_at = ?
-       WHERE id = ?`,
+  if (contentType.includes('multipart/form-data')) {
+    const formData = await c.req.formData();
+    const value = formData.get('photo');
+    if (value instanceof File && value.size > 0) evidencePhoto = value;
+  }
+
+  if (evidencePhoto) {
+    const validationError = validatePhotoFile(evidencePhoto);
+    if (validationError) return c.json({ error: validationError }, 400);
+  }
+
+  const previousEvidence = await c.env.DB.prepare(
+    `SELECT id, r2_object_key FROM complaint_photos
+     WHERE complaint_id = ? AND photo_type = 'COMPLETION_EVIDENCE' AND deleted_at IS NULL`,
   )
-    .bind(now, now, complaintId)
-    .run();
+    .bind(complaintId)
+    .all<{ id: string; r2_object_key: string }>();
 
-  await writeAuditLog(c.env.DB, cs.id, 'COMPLETE_COMPLAINT', 'complaint', complaintId);
+  if (evidencePhoto) {
+    const photoId = generateId('cph');
+    const buffer = await evidencePhoto.arrayBuffer();
+    const checksum = await sha256Hex(buffer);
+    const ext = mimeToExt(evidencePhoto.type);
+    const key = buildComplaintPhotoKey(complaintId, ext, 'completion', photoId);
+    const retentionDays = Number(await getSetting(c.env.DB, 'photo_retention_days', '90'));
+
+    await uploadToR2(c.env.PHOTO_BUCKET, key, buffer, evidencePhoto.type);
+
+    try {
+      await c.env.DB.batch([
+        c.env.DB.prepare(
+          `UPDATE complaint_photos SET deleted_at = ?
+           WHERE complaint_id = ? AND photo_type = 'COMPLETION_EVIDENCE' AND deleted_at IS NULL`,
+        ).bind(now, complaintId),
+        c.env.DB.prepare(
+          `INSERT INTO complaint_photos (
+             id, complaint_id, r2_object_key, original_filename, mime_type,
+             byte_size, checksum_sha256, uploaded_at, expires_at, photo_type
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETION_EVIDENCE')`,
+        ).bind(
+          photoId,
+          complaintId,
+          key,
+          evidencePhoto.name,
+          evidencePhoto.type,
+          evidencePhoto.size,
+          checksum,
+          now,
+          addDaysUtc(now, retentionDays),
+        ),
+        c.env.DB.prepare(
+          `UPDATE complaints SET status = 'WAITING_VERIFICATION',
+             waiting_verification_at = ?, updated_at = ? WHERE id = ?`,
+        ).bind(now, now, complaintId),
+      ]);
+    } catch (error) {
+      await c.env.PHOTO_BUCKET.delete(key);
+      throw error;
+    }
+
+    for (const oldPhoto of previousEvidence.results ?? []) {
+      await c.env.PHOTO_BUCKET.delete(oldPhoto.r2_object_key);
+    }
+  } else {
+    await c.env.DB.prepare(
+      `UPDATE complaints SET status = 'WAITING_VERIFICATION',
+         waiting_verification_at = ?, updated_at = ? WHERE id = ?`,
+    )
+      .bind(now, now, complaintId)
+      .run();
+  }
+
+  await writeAuditLog(c.env.DB, cs.id, 'COMPLETE_COMPLAINT', 'complaint', complaintId, {
+    evidencePhotoUploaded: Boolean(evidencePhoto),
+  });
 
   const area = await c.env.DB.prepare(
     `SELECT name
@@ -312,6 +413,51 @@ complaintRoutes.post('/:id/complete', async (c) => {
     ok: true,
     status: 'WAITING_VERIFICATION',
   });
+});
+
+complaintRoutes.post('/verify-all', async (c) => {
+  const admin = requireAdmin(c);
+  if (!admin) return c.json({ error: 'Forbidden' }, 403);
+
+  const pending = await c.env.DB.prepare(
+    `SELECT id, complaint_number, assigned_user_id
+     FROM complaints WHERE status = 'WAITING_VERIFICATION'`,
+  ).all<{
+    id: string;
+    complaint_number: string;
+    assigned_user_id: string | null;
+  }>();
+
+  const complaints = pending.results ?? [];
+  if (complaints.length === 0) return c.json({ ok: true, verifiedCount: 0 });
+
+  const now = nowUtcIso();
+  await c.env.DB.prepare(
+    `UPDATE complaints SET status = 'RESOLVED', resolved_at = ?, updated_at = ?
+     WHERE status = 'WAITING_VERIFICATION'`,
+  )
+    .bind(now, now)
+    .run();
+
+  for (const complaint of complaints) {
+    await writeAuditLog(c.env.DB, admin.id, 'VERIFY_COMPLAINT', 'complaint', complaint.id, {
+      bulk: true,
+    });
+
+    if (complaint.assigned_user_id) {
+      await createNotification(
+        c.env.DB,
+        complaint.assigned_user_id,
+        'COMPLAINT_RESOLVED',
+        'Pengaduan telah diverifikasi',
+        `${complaint.complaint_number} telah diverifikasi selesai oleh admin.`,
+        'complaint',
+        complaint.id,
+      );
+    }
+  }
+
+  return c.json({ ok: true, verifiedCount: complaints.length });
 });
 
 complaintRoutes.post('/:id/verify', async (c) => {

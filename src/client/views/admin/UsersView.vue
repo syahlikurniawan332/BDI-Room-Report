@@ -5,6 +5,7 @@ import { formatWib } from '../../lib/utils';
 import type { UserPublic } from '@shared/constants';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import UserActionButtons from '../../components/UserActionButtons.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -59,6 +60,11 @@ async function createUser() {
 }
 
 async function toggleActive(user: UserPublic) {
+  if (user.id === auth.user?.id) {
+    error.value = 'Akun yang sedang digunakan tidak dapat dinonaktifkan.';
+    return;
+  }
+
   await apiPatch(`/users/${user.id}`, { isActive: !user.isActive });
   await load();
 }
@@ -218,7 +224,7 @@ async function saveEdit(user: UserPublic) {
       <button type="submit" class="btn-primary md:col-span-2">Simpan</button>
     </form>
 
-    <div class="card overflow-x-auto">
+    <div class="card hidden overflow-x-auto md:block">
       <table class="min-w-full text-sm">
         <thead>
           <tr class="border-b text-left text-slate-500">
@@ -313,48 +319,89 @@ async function saveEdit(user: UserPublic) {
               </div>
 
               <!-- Mode Normal -->
-              <div v-else class="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <button
-                  type="button"
-                  class="font-medium text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                  @click="startEdit(user)"
-                >
-                  Edit
-                </button>
-
-                <button
-                  type="button"
-                  class="font-medium text-primary-600"
-                  @click="resetPassword(user)"
-                >
-                  Reset Password
-                </button>
-
-                <button
-                  type="button"
-                  class="font-medium text-primary-600"
-                  @click="revokeSessions(user)"
-                >
-                  Logout Pengguna
-                </button>
-
-                <button
-                  type="button"
-                  class="font-medium transition"
-                  :class="
-                    user.isActive
-                      ? 'text-red-600 hover:text-red-700 dark:text-red-400'
-                      : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400'
-                  "
-                  @click="toggleActive(user)"
-                >
-                  {{ user.isActive ? 'Nonaktifkan' : 'Aktifkan' }}
-                </button>
-              </div>
+              <UserActionButtons
+                v-else
+                :user="user"
+                :is-own-account="user.id === auth.user?.id"
+                @edit="startEdit(user)"
+                @reset-password="resetPassword(user)"
+                @revoke-sessions="revokeSessions(user)"
+                @toggle-active="toggleActive(user)"
+              />
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="space-y-3 md:hidden">
+      <article
+        v-for="user in users"
+        :key="user.id"
+        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      >
+        <template v-if="editingId === user.id">
+          <div class="space-y-3">
+            <div>
+              <label class="label">Nama</label>
+              <input v-model="editForm.displayName" class="input" maxlength="200" />
+            </div>
+            <div>
+              <label class="label">Username</label>
+              <input v-model="editForm.username" class="input" maxlength="50" />
+            </div>
+            <div>
+              <label class="label">Email</label>
+              <input v-model="editForm.email" type="email" class="input" maxlength="200" />
+            </div>
+            <div class="flex gap-2">
+              <button type="button" class="btn-primary flex-1" :disabled="savingEdit" @click="saveEdit(user)">
+                {{ savingEdit ? 'Menyimpan...' : 'Simpan' }}
+              </button>
+              <button type="button" class="btn-secondary" :disabled="savingEdit" @click="cancelEdit">
+                Batal
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="truncate font-semibold text-slate-900 dark:text-slate-100">
+                {{ user.displayName }}
+              </h2>
+              <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">@{{ user.username }}</p>
+            </div>
+            <span
+              class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+              :class="user.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'"
+            >
+              {{ user.isActive ? 'Aktif' : 'Nonaktif' }}
+            </span>
+          </div>
+
+          <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
+            <dt class="text-slate-500">Email</dt>
+            <dd class="min-w-0 break-all text-slate-700 dark:text-slate-300">{{ user.email }}</dd>
+            <dt class="text-slate-500">Role</dt>
+            <dd class="text-slate-700 dark:text-slate-300">{{ user.role }}</dd>
+            <dt class="text-slate-500">Login terakhir</dt>
+            <dd class="text-slate-700 dark:text-slate-300">{{ formatWib(user.lastLoginAt) }}</dd>
+          </dl>
+
+          <div class="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
+            <UserActionButtons
+              :user="user"
+              :is-own-account="user.id === auth.user?.id"
+              @edit="startEdit(user)"
+              @reset-password="resetPassword(user)"
+              @revoke-sessions="revokeSessions(user)"
+              @toggle-active="toggleActive(user)"
+            />
+          </div>
+        </template>
+      </article>
     </div>
   </div>
 </template>
